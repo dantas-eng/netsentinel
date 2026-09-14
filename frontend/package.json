@@ -1,0 +1,16 @@
+{
+  "name": "netsentinel-dashboard",
+  "version": "0.5.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@tailwindcss/cli": "4.3.3",
+    "socket.io-client": "4.8.3",
+    "tailwindcss": "4.3.3",
+    "vis-network": "10.1.2"
+  }
+}

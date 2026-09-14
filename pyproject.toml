@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "netsentinel"
+version = "0.6.0"
+description = "Captura passiva e classificação fuzzy do laboratório NetSentinel"
+requires-python = ">=3.11"
+dependencies = ["scapy>=2.6,<3", "scikit-fuzzy>=0.5,<0.6", "numpy>=1.24,<3", "scipy>=1.10,<2", "Flask>=3.1,<4", "SQLAlchemy>=2.0,<2.1", "Flask-SocketIO>=5.5,<6", "simple-websocket>=1.1,<2", "alembic>=1.14,<2", "psycopg[binary]>=3.2,<4", "gunicorn>=23,<24"]
+
+[project.optional-dependencies]
+dev = ["ruff==0.16.6"]
+
+[project.scripts]
+netsentinel-capture = "netsentinel.capture.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
+[tool.setuptools.package-data]
+"netsentinel.api" = ["templates/*.html", "static/*", "static/vendor/*", "static/vendor/licenses/**/*"]

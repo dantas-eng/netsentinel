@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+*.pcap
+*.pcapng
+!tests/fixtures/demo_gateway_claim.pcap
+!tests/fixtures/demo_no_gateway_claim.pcap
+
+.ruff_cache/
+
+node_modules/
+
+.env.docker

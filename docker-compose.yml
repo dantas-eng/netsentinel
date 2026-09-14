@@ -1,0 +1,43 @@
+name: netsentinel
+services:
+  # Serviço cloud/synthetic: somente dados artificiais, sem acesso ao laboratório.
+  synthetic:
+    image: netsentinel:local
+    build:
+      context: .
+      target: runtime
+    environment:
+      APP_MODE: cloud
+      DATABASE_URL: postgresql+psycopg://netsentinel:${SYNTHETIC_POSTGRES_PASSWORD:?Configure .env.docker}@postgres:5432/netsentinel
+      SECRET_KEY: ${SYNTHETIC_SECRET_KEY:?Configure .env.docker}
+      OPERATOR_USERNAME: ${SYNTHETIC_OPERATOR_USERNAME:-operador}
+      OPERATOR_PASSWORD_HASH: ${SYNTHETIC_OPERATOR_PASSWORD_HASH:?Configure .env.docker}
+      PORT: "8080"
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    stop_grace_period: 20s
+
+  postgres:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_DB: netsentinel
+      POSTGRES_USER: netsentinel
+      POSTGRES_PASSWORD: ${SYNTHETIC_POSTGRES_PASSWORD:?Configure .env.docker}
+    volumes:
+      - synthetic_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U netsentinel -d netsentinel"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    # Sem publicação de porta do banco no notebook.
+
+volumes:
+  synthetic_postgres:

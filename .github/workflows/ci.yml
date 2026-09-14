@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint e testes offline
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Obter código
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Preparar Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Instalar dependências
+        id: install
+        run: python -m pip install -e '.[dev]'
+
+      - name: Ruff
+        run: python -m ruff check .
+
+      # Executar também quando o lint falhar, para o PR mostrar os dois resultados.
+      - name: Testes offline
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          PYTHONPATH: src
+        run: python tests/run_offline.py
+
+  frontend:
+    name: Frontend offline
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Instalar dependências do build
+        working-directory: frontend
+        run: npm ci
+      - name: Testar contratos do frontend
+        working-directory: frontend
+        run: npm test
+      - name: Recompilar assets locais
+        working-directory: frontend
+        run: npm run build
+      - name: Conferir assets versionados
+        run: git diff --exit-code -- src/netsentinel/api/static
+
+  container:
+    name: Container e Postgres sintéticos
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Preparar credenciais efêmeras de CI
+        run: |
+          python -m pip install Werkzeug
+          python - <<'PY'
+          from pathlib import Path
+          from secrets import token_hex
+          from werkzeug.security import generate_password_hash
+          password = token_hex(24)
+          Path('.env.docker').write_text(
+              'SYNTHETIC_POSTGRES_PASSWORD=' + token_hex(32) + '\n'
+              'SYNTHETIC_SECRET_KEY=' + token_hex(32) + '\n'
+              'SYNTHETIC_OPERATOR_USERNAME=operador\n'
+              'SYNTHETIC_OPERATOR_PASSWORD=' + password + '\n'
+              "SYNTHETIC_OPERATOR_PASSWORD_HASH='" + generate_password_hash(password) + "'\n"
+          )
+          PY
+      - name: Validar configuração, construir e subir
+        run: |
+          docker compose --env-file .env.docker config --quiet
+          docker compose --env-file .env.docker up --build --wait --wait-timeout 180
+      - name: Verificar HTTP e sessão
+        run: python tests/container_smoke.py
+      - name: Verificar revisão Alembic no Postgres real
+        run: |
+          docker compose --env-file .env.docker exec -T postgres psql -U netsentinel -d netsentinel -v ON_ERROR_STOP=1 -c 'SELECT version_num FROM alembic_version;'
+      - name: Encerrar ambiente efêmero
+        if: always()
+        run: docker compose --env-file .env.docker down --volumes

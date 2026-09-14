@@ -1,0 +1,16 @@
+{
+  "interface": "enp0s3",
+  "internal_cidr": "10.77.0.0/24",
+  "victim_ip": "10.77.0.20",
+  "victim_mac": "02:00:00:00:00:20",
+  "gateway_ip": "10.77.0.1",
+  "gateway_mac": "02:00:00:00:00:10",
+  "attacker_ip": "10.77.0.30",
+  "attacker_mac": "02:00:00:00:00:30",
+  "sensor_internal_ip": "10.77.0.40",
+  "sensor_internal_mac": "02:00:00:00:00:40",
+  "agent_port": 8787,
+  "token_file": "/etc/netsentinel/agent.token",
+  "state_dir": "/var/lib/netsentinel",
+  "isolated_lab": true
+}
