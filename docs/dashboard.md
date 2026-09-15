@@ -1,4 +1,4 @@
-# Dashboard 0.6.0
+# Dashboard 0.7.0
 
 ## Operação
 
@@ -21,7 +21,7 @@ exibidas; não são substituídas por dados de demonstração.
 | --- | --- |
 | Topologia | `/api/topology`; vis.js Network com nós identificados por MAC, cores da classificação recebida e conexões Ethernet observadas. Destinos sem origem observada e broadcast não recebem reputação inventada. Seleção abre detalhes quando existe registro no inventário. |
 | Dispositivos | `/api/devices`; score de risco, classificação, reputação manual, última observação e baseline em bytes/s. Score nulo permanece sem avaliação. |
-| Detalhes | Inputs do fuzzy, motivo do score nulo, confirmação/revogação com motivo e calibração via rotas existentes. Calibração mostra janelas aceitas de 0 a 5 e estado. |
+| Detalhes | Inputs do fuzzy, motivo do score nulo, confirmação/revogação com motivo e calibração via rotas existentes. Calibração mostra janelas aceitas de 0 a 5 e estado. Três superfícies novas no modal: (1) **Evidência observada** — protocolos, IPs reclamados e, quando finita, proporção de replies ARP, com nota de que protocolos/IPs não entram na inferência; (2) **Score no tempo** — sparkline de `GET /api/devices/<mac>/history?limit=200`, limiares 35/65 e empty-state textual; (3) **motivo do calibrate** desabilitado em `#calibrate-reason` (reputação, coleta em andamento ou fonte parada). |
 | Eventos | `/api/events` paginado e Socket.IO; até 200 registros mais recentes, mais novo primeiro, detalhes JSON expansíveis. Ordenação/deduplicação por event_id, não pelo relógio do navegador. |
 | Auditoria | `/api/audit`; até 100 ações mais recentes com operador, MAC, motivo e instante. |
 | Estado | `/api/status`; ambiente, fonte em execução/parada, erro, janela de 8 s e última captura. Após duas janelas sem atualização, a interface alerta sobre dados antigos. Esse indicador não muda os parâmetros do motor. |
@@ -34,9 +34,9 @@ reconhecidos continuam sujeitos ao fuzzy. O frontend não calcula um score novo.
 ## Atualizações e reconexão
 
 O cliente usa Socket.IO série 4 com transporte WebSocket e autenticação
-`auth: {csrf_token}`. Escuta `risk_evaluated`, `mitigation_applied`,
-`mitigation_status`, `mitigation_error`, `reputation_changed`,
-`baseline_calibrated`, `snapshot_updated` e `source_error`.
+`auth: {csrf_token}`. Escuta `risk_evaluated`, `threat_unmitigable`,
+`mitigation_applied`, `mitigation_status`, `mitigation_error`,
+`reputation_changed`, `baseline_calibrated`, `snapshot_updated` e `source_error`.
 
 Conexão, reconexão e notificações provocam reconciliação REST dos dados e
 recuperação dos eventos pendentes. Chamadas concorrentes são agrupadas. O cursor
@@ -44,7 +44,8 @@ só avança com páginas REST; receber um ID maior por Socket.IO não pula event
 que ainda faltam. O histórico retido na tela tem limite de 200 itens; o banco
 continua sendo a fonte de histórico. No primeiro acesso o replay começa em zero.
 Isso é adequado ao ensaio MVP, mas um banco com muitos eventos aumenta o tempo
-de carga inicial; não foi implementada uma rota adicional de histórico reverso.
+de carga inicial. O modal lê a série de score em `GET /api/devices/<mac>/history`;
+isso não substitui o replay paginado de `/api/events`.
 
 Não há polling periódico de endpoints. O timer local apenas atualiza o aviso de
 idade da captura. Desconexão é visível; o botão Atualizar permite tentar conexão
@@ -79,17 +80,22 @@ Conteúdo recebido é inserido com textContent, não como HTML executável.
 
 ## Validação desta entrega
 
-- **101 testes Python e Ruff aprovados:** preservam os testes anteriores, acrescentam
-  shell público/dados privados, assets locais acessíveis, MIME de módulos,
-  headers sem cache e avisos de licença.
-- **9 testes JavaScript aprovados:** CSRF antes da credencial e rotação do token,
-  falha de CSRF, recuperação/paginação/deduplicação, cancelamento na troca de
-  sessão, dados do grafo e limites da comparação dos contadores.
+- **148 testes Python e Ruff aprovados** (`tests/run_offline.py` → `Ran 148 tests`):
+  preservam os testes anteriores e cobrem CSP no header HTTP, corpus de evidência,
+  histórico, poda e detecção ampla.
+- **14 testes JavaScript aprovados** (`cd frontend && npm test` → `# pass 14`):
+  CSRF, replay, grafo, `counterInterval`/`reason_code`, corpus compartilhado e
+  `sparkline`.
+- **CSP no header:** `Content-Security-Policy` com `default-src 'self'` e
+  `script-src 'self'` é devolvido por Flask e exercitado nos testes de integração.
+  A checagem visual no navegador (grafo, console sem violação CSP, status
+  `Eventos conectados` e seções novas do modal) **não foi refeita** nesta
+  atualização: a imagem Docker em `:8080` estava desatualizada.
 - **Build e sintaxe aprovados:** Tailwind, cópia dos bundles e `node --check` nos
   módulos; CI recebeu job frontend. O workflow ainda não rodou em GitHub real.
 
-Não houve teste visual ou interação em navegador, renderização de canvas,
-WebSocket navegador-servidor sobre rede, PostgreSQL real nem ensaio das VMs.
+Não houve revalidação visual ou interação em navegador nesta atualização,
+nem PostgreSQL real nem ensaio das VMs.
 Os testes JavaScript usam funções puras e fetch simulado; Flask/Socket.IO usam
 os clientes de teste existentes. Não confundir esses resultados com a demo ao vivo.
 

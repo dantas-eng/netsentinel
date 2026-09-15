@@ -1,4 +1,4 @@
-# NetSentinel — captura, fuzzy, segurança e dashboard (0.6.0)
+# NetSentinel — captura, fuzzy, segurança e dashboard (0.7.0)
 
 Entrega parcial do MVP: captura passiva Scapy, normalização, janela móvel, saída
 JSON Lines e classificação fuzzy Mamdani com providers injetados.
@@ -73,7 +73,7 @@ Referência da API Scapy: https://scapy.readthedocs.io/en/latest/api/scapy.sendr
 PYTHONPATH=src .venv/bin/python tests/run_offline.py
 ```
 
-**Resultado: 101 testes Python aprovados**, em Python 3.12, Scapy 2.7.0 e scikit-fuzzy 0.5.0.
+**Resultado: 148 testes Python aprovados**, em Python 3.12, Scapy 2.7.0 e scikit-fuzzy 0.5.0.
 A suíte inclui os 14 testes originais, pertinências/regras, autenticação, isolamento,
 restauração, falhas parciais, contadores, timeout e aceitação
 PCAP ponta a ponta do Atacante novo sem baseline, com e sem conflito observado. O runner evita descoberta de
@@ -130,18 +130,23 @@ Entradas experimentais aprovadas:
 | Frequência | (ARP requests + replies) / observed_seconds | Linear 0–5/s, saturada acima |
 | Reputação | known / new do provider | Categórica, 0 ou 1 |
 | Desvio | abs(bytes/observed_seconds - baseline) / baseline | Linear 0–1, saturada acima |
+| Razão de replies ARP | `arp_replies / (arp_requests + arp_replies)`; `None` se não há ARP na janela | Rampa 0,5–1,0 (`RATIO_HIGH_FLOOR=0.5`); baixo é o complemento |
 
 O baseline deve usar **bytes capturados/s por MAC de origem**, não bits/s, soma
 TX+RX ou taxa nominal da interface. MAC conhecido não é sinônimo de benigno.
 Conflito sinaliza risco entre envolvidos; não atribui autoria do ataque.
 
+Continua havendo **cinco regras**. `anomalous` é o máximo entre frequência alta,
+desvio alto e razão alta; R4/R5 exigem também razão baixa. Sem tráfego ARP a
+razão fica `None` e R4/R5 não declaram risco baixo.
+
 | Regra | Antecedente | Consequente |
 | --- | --- | --- |
 | R1 | Conflito alto | Alto |
-| R2 | Conflito baixo E (frequência alta OU desvio alto) E novo | Alto |
-| R3 | Conflito baixo E (frequência alta OU desvio alto) E conhecido | Médio |
-| R4 | Conflito baixo E frequência baixa E desvio baixo E novo | Médio |
-| R5 | Conflito baixo E frequência baixa E desvio baixo E conhecido | Baixo |
+| R2 | Conflito baixo E `anomalous` E novo | Alto |
+| R3 | Conflito baixo E `anomalous` E conhecido | Médio |
+| R4 | Conflito baixo E frequência baixa E desvio baixo E razão baixa E novo | Médio |
+| R5 | Conflito baixo E frequência baixa E desvio baixo E razão baixa E conhecido | Baixo |
 
 Mamdani: AND mínimo, OR máximo, implicação mínimo, agregação máximo, centroide.
 Primitivas reais de scikit-fuzzy: interpolação de pertinência, `trapmf`, `trimf`
@@ -172,6 +177,11 @@ Sem desvio disponível, R4/R5 não podem declarar baixo risco por ausência de p
 Não há GA nem fallback manual de score no motor. O executor de segurança pode
 acionar a mitigação quando há score >=65 E alegação falsa sobre o Gateway,
 originada no Atacante configurado; essa decisão fica fora do motor fuzzy.
+A detecção, porém, passou a ser ampla: qualquer MAC com score >=65 e
+falsificação de um IP em `trusted_bindings()` é ameaça confirmada. Só o MAC
+autorizado por `LabConfig.require_attacker` segue a sequência ADR 0007 e chama
+a mitigação; os demais emitem `threat_unmitigable`. Ver
+[ADR 0008](docs/decisions/0008-deteccao-ampla-mitigacao-restrita.md).
 
 ### Fixtures de aceitação
 
@@ -273,7 +283,7 @@ npm test
 npm run build
 ```
 
-9 testes JavaScript aprovados, além dos 101 Python. CI inclui o job frontend.
+14 testes JavaScript aprovados, além dos 148 Python. CI inclui o job frontend.
 Node só é necessário para testes/build antes do isolamento; não para usar a demo.
 Não houve validação visual em navegador nesta entrega. Testes de contratos e de
 assets via Flask não comprovam interação/canvas/WebSocket no navegador real.
@@ -292,8 +302,30 @@ A ADR 0007 exige duas avaliações consecutivas qualificando para o mesmo MAC an
 da mitigação; uma avaliação que não qualifica reinicia a sequência. Não impõe
 atraso fixo de 16 s. O ensaio de queda/recuperação do ping continua pendente.
 
-Validação atual: 101 testes Python, 9 JS, Ruff e build do frontend aprovados.
-Imagem Docker, Compose/Postgres real, smoke HTTP do container e browser Windows
-**não foram executados neste ambiente**, que não dispõe de Docker. O novo job de
-CI prepara essa verificação quando executado no GitHub. Cloud Run/CD permanece
-pendente; um Dockerfile não comprova deploy em nuvem concluído.
+Validação 0.6.0 na época: 101 testes Python, 9 JS, Ruff e build do frontend.
+A contagem vigente desta entrega é a da seção 0.7.0 abaixo.
+
+## Melhorias 0.7.0
+
+Esta rodada fechou o que era verificável offline ou no Docker sintético:
+`SecurityIdentity` e `trusted_bindings()`, detecção ampla com mitigação restrita
+(ADR 0008, segundo atacante sintético, `threat_unmitigable`), `arp_reply_ratio`
+nas cinco regras (`anomalous` + R4/R5, piso 0,5 justificado em
+[docs/validation/fuzzy-metrics.md](docs/validation/fuzzy-metrics.md)),
+telemetria no snapshot/modal, corpus compartilhado de evidência
+(`reason_code`, emenda da ADR 0006), harness de métricas, histórico
+`GET /api/devices/<mac>/history` com sparkline no modal, CSP no header HTTP,
+contraste das bordas, motivo do calibrate desabilitado e poda manual
+`python -m netsentinel.api prune --keep-days DIAS [--confirm]`.
+
+**Contagens medidas nesta atualização:** 148 testes Python
+(`PYTHONPATH=src .venv/bin/python tests/run_offline.py` → `Ran 148 tests`) e
+14 testes JavaScript (`cd frontend && npm test` → `# pass 14`). Ruff nos
+arquivos da poda aprovado.
+
+Residuais honestos: a imagem Docker em `:8080` estava desatualizada, então a
+checagem visual de CSP e das seções novas do modal **não foi refeita** na
+stack em execução. O MAC reservado de auditoria da poda
+(`02:00:00:00:00:00`) não aparece em `/api/devices` e `change_reputation` o
+rejeita. Ensaio nas quatro VMs, nftables no kernel e deploy em nuvem
+continuam pendentes.

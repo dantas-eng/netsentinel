@@ -1,4 +1,4 @@
-# Backend e dashboard 0.6.0 — operação e contratos
+# Backend e dashboard 0.7.0 — operação e contratos
 
 REST Flask, Socket.IO/Observer, repositories SQLAlchemy, calibração persistida e
 sessão do operador implementados. O dashboard visual é servido em `/`.
@@ -81,8 +81,9 @@ independente do token do agente da Vítima; nunca enviar o token do agente ao br
 | GET /health | Verifica acesso ao schema e informa modo |
 | GET /api/auth/session | Operador atual |
 | GET /api/status | Estado da fonte e instante do último snapshot |
-| GET /api/devices | Reputação, risco atual, baseline em bytes/s e datas |
-| POST /api/devices/{mac}/reputation | `{known: boolean, reason: string}`; confirmação/revogação auditada |
+| GET /api/devices | Reputação, risco atual, baseline em bytes/s e datas. Omite o MAC reservado de auditoria `02:00:00:00:00:00`. |
+| GET /api/devices/{mac}/history?limit=100 | Série `risk_evaluated` persistida (`event_id`, `timestamp`, `score`, `classification`); `1 <= limit <= 500`. |
+| POST /api/devices/{mac}/reputation | `{known: boolean, reason: string}`; confirmação/revogação auditada. Rejeita o MAC reservado de auditoria. |
 | POST /api/devices/{mac}/calibrations | Inicia coleta explícita; retorna 202 e calibration_id |
 | GET /api/devices/{mac}/calibrations | Estado e amostras persistidas |
 | GET /api/topology | Nós persistidos e conexões observadas na última janela |
@@ -120,6 +121,7 @@ Não há handlers de alteração de dados pelo socket.
 Eventos existentes são preservados:
 
 - risk_evaluated: mantém attacker/false_gateway_claim e acrescenta devices, por MAC.
+- threat_unmitigable: ameaça confirmada em MAC que não está pré-aprovado (ADR 0008).
 - mitigation_applied e mitigation_status: preservam evidence do agente.
 - mitigation_error: mantém a informação de tentativa posterior.
 
@@ -170,8 +172,8 @@ python -m ruff check .
 PYTHONPATH=src python tests/run_offline.py
 ```
 
-101 testes Python aprovados; Ruff sem apontamentos. O frontend acrescenta
-9 testes JavaScript (`cd frontend` e `npm test`) e build local de assets. SQLite real cobre persistência após
+148 testes Python aprovados (`tests/run_offline.py` → `Ran 148 tests`); Ruff sem apontamentos nos arquivos da poda. O frontend acrescenta
+14 testes JavaScript (`cd frontend` e `npm test` → `# pass 14`) e build local de assets. SQLite real cobre persistência após
 reabertura, reputação, auditoria, calibração e migrations. O teste Alembic compara
 o schema criado com os modelos; também gera SQL PostgreSQL offline.
 

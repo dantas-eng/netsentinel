@@ -1,6 +1,6 @@
 # NetSentinel — arquitetura e padrões de projeto
 
-Referência: implementação 0.6.0. Este documento atende ao requisito NEXUS de
+Referência: implementação 0.7.0. Este documento atende ao requisito NEXUS de
 arquitetura documentada com padrões aplicados e justificados. A rastreabilidade
 dos cinco requisitos e seus estados está em [compliance.md](../compliance.md).
 
@@ -27,10 +27,10 @@ sugira que persistência e coordenação só ocorrem depois da defesa.
 | --- | --- | --- |
 | capture | [CaptureService](../../src/netsentinel/capture/service.py), [ScapySource](../../src/netsentinel/capture/scapy_source.py), [normalizer](../../src/netsentinel/capture/normalizer.py) e [ObservationWindow](../../src/netsentinel/capture/window.py): observações Ethernet/ARP, agregação e qualidade da janela. | Não atribui confiança ao MAC alegado no ARP e não aplica firewall. |
 | analysis | [FeatureExtractor](../../src/netsentinel/analysis/features.py) e [FuzzyRiskStrategy](../../src/netsentinel/analysis/fuzzy/engine.py): inputs, pertinências, regras Mamdani e score por dispositivo. | Não abre conexão SQL nem executa defesa. Inputs ausentes não viram valores baixos inventados. |
-| security | [SecurityDemo](../../src/netsentinel/security/demo.py), [MitigationStrategy](../../src/netsentinel/security/strategy.py), [agente](../../src/netsentinel/security/agent/) e [verify_interval](../../src/netsentinel/security/evidence.py): elegibilidade do alvo, duas avaliações consecutivas, defesa e evidência. | Score alto sozinho não autoriza mitigação; o Sensor não executa o firewall da Vítima. |
-| repositories | [Repository](../../src/netsentinel/repositories/store.py), [models](../../src/netsentinel/repositories/models.py), [Database](../../src/netsentinel/repositories/database.py) e [migrações](../../migrations/): dispositivos, reputação, baseline, auditoria, eventos e último snapshot. | Persistir presença não promove automaticamente NEW para KNOWN. |
+| security | [SecurityIdentity](../../src/netsentinel/security/identity.py), [SecurityDemo](../../src/netsentinel/security/demo.py), [MitigationStrategy](../../src/netsentinel/security/strategy.py), [agente](../../src/netsentinel/security/agent/) e [verify_interval](../../src/netsentinel/security/evidence.py): `trusted_bindings()`, detecção ampla, sequência por MAC, defesa só do MAC pré-aprovado e evidência. | Score alto sozinho não autoriza mitigação; o Sensor não executa o firewall da Vítima. |
+| repositories | [Repository](../../src/netsentinel/repositories/store.py), [models](../../src/netsentinel/repositories/models.py), [Database](../../src/netsentinel/repositories/database.py) e [migrações](../../migrations/): dispositivos, reputação, baseline, auditoria, eventos, `risk_history()` e `prune_events()`. | Persistir presença não promove automaticamente NEW para KNOWN. |
 | services | [BackendPipeline](../../src/netsentinel/services/pipeline.py), [SourceRunner](../../src/netsentinel/services/runner.py) e [fonte sintética](../../src/netsentinel/services/synthetic.py): compõem dependências e coordenam uma fonte por processo. | Fonte de laboratório e fonte sintética não são conectadas entre si. |
-| api | [create_app](../../src/netsentinel/api/app.py), [entrypoint local](../../src/netsentinel/api/__main__.py), [WSGI](../../src/netsentinel/api/wsgi.py), [template](../../src/netsentinel/api/templates/dashboard.html) e [frontend](../../src/netsentinel/api/static/dashboard.mjs): sessão/CSRF, REST, Socket.IO e apresentação. | A interface apresenta scores/evidências recebidos; não captura tráfego nem envia comandos arbitrários ao agente. |
+| api | [create_app](../../src/netsentinel/api/app.py), [entrypoint local](../../src/netsentinel/api/__main__.py), [WSGI](../../src/netsentinel/api/wsgi.py), [template](../../src/netsentinel/api/templates/dashboard.html) e [frontend](../../src/netsentinel/api/static/dashboard.mjs): sessão/CSRF, REST (inclui `GET /api/devices/<mac>/history`), Socket.IO, CSP e subcomando `prune`. | A interface apresenta scores/evidências recebidos; não captura tráfego nem envia comandos arbitrários ao agente. |
 
 Módulos de apoio: [domain/observation.py](../../src/netsentinel/domain/observation.py)
 representa a observação normalizada; [events/bus.py](../../src/netsentinel/events/bus.py)
@@ -48,10 +48,11 @@ fornece o Observer em processo. Não constituem serviços remotos adicionais.
    último snapshot via Repository. MAC novo permanece NEW. Em seguida chama
    `SecurityDemo.consume`, cujo classificador consulta os providers persistidos
    de reputação e baseline e calcula risco.
-4. `SecurityDemo` publica `risk_evaluated`. Só chama a estratégia de mitigação após
-   duas avaliações consecutivas qualificando para o mesmo alvo configurado:
-   alegação falsa do Gateway e score >=65. Produz eventos de aplicação, status ou
-   erro. A execução real ocorre no agente da Vítima; a estratégia sintética não o contata.
+4. `SecurityDemo` publica `risk_evaluated` para todo `results`. Ameaça confirmada
+   é score >=65 com falsificação de um IP em `SecurityIdentity.trusted_bindings()`.
+   Só o MAC de `attacker_mac` segue a sequência ADR 0007 e chama a estratégia;
+   qualquer outro MAC confirmado emite `threat_unmitigable` (ADR 0008). A execução
+   real ocorre no agente da Vítima; a estratégia sintética não o contata.
 5. Após a classificação/defesa, o pipeline coleta amostras de calibração elegíveis.
    Assim, a quinta janela não é classificada contra um baseline que acaba de
    incorporá-la. Publica `baseline_calibrated`, se aplicável, e `snapshot_updated`.
@@ -75,9 +76,10 @@ retorna uma função de remoção; `publish(event)` notifica callbacks. A API re
 `notify` com `bus.subscribe(notify)` em [app.py](../../src/netsentinel/api/app.py).
 O pipeline conhece o barramento; não emite diretamente para sockets de navegador.
 
-Eventos incluem `risk_evaluated`, `mitigation_applied`, `mitigation_status`,
-`mitigation_error`, `reputation_changed`, `baseline_calibrated`, `snapshot_updated`
-e `source_error`. O barramento é local ao processo; Socket.IO transporta as
+Eventos incluem `risk_evaluated`, `threat_unmitigable`, `mitigation_applied`,
+`mitigation_status`, `mitigation_error`, `reputation_changed`,
+`baseline_calibrated`, `snapshot_updated` e `source_error`. O barramento é local
+ao processo; Socket.IO transporta as
 notificações até o browser. São papéis complementares, não o mesmo componente.
 
 **Evidência:** [test_backend.py](../../tests/integration/test_backend.py),
@@ -107,6 +109,8 @@ Isso permite testar o fluxo e executar o ambiente sintético com contratos está
 `ReputationProvider` e `BaselineProvider` também são dependências injetadas por
 contrato. Essa injeção permite testar ausência/falha de histórico sem colocar SQL
 no motor; não representa aprendizado automático ou GA já implementado.
+`SecurityIdentity` (`attacker_mac` + `trusted_bindings()`) é o contrato que
+separa inventário confiável da autorização de mitigação.
 
 **Evidência:** `FeatureTests.test_replacing_provider_changes_classification`, em
 [test_fuzzy.py](../../tests/unit/test_fuzzy.py), verifica substituição de provider;
@@ -129,8 +133,8 @@ auditoria e calibração coerentes.
 
 **Onde está aplicado:** [store.py](../../src/netsentinel/repositories/store.py),
 `Repository`, expõe operações como `get_reputation`, `get_baseline_bps`,
-`save_snapshot`, `change_reputation`, `collect_calibration`, `append_event` e
-`events`. [database.py](../../src/netsentinel/repositories/database.py) gerencia
+`save_snapshot`, `change_reputation`, `collect_calibration`, `append_event`,
+`events`, `risk_history` e `prune_events`. [database.py](../../src/netsentinel/repositories/database.py) gerencia
 engine, sessões e transações; [models.py](../../src/netsentinel/repositories/models.py)
 define as tabelas. [Alembic](../../migrations/) versiona o schema.
 O mesmo Repository SQLAlchemy recebe a URL do banco; não existem duas classes de
@@ -169,8 +173,15 @@ Postgres real, build/execução da imagem, deploy cloud e browser/VMs ainda depe
 de validação. Operação atual exige um worker/uma instância por ambiente.
 
 [ADR 0006](../decisions/0006-duplicacao-da-verificacao-de-evidencia.md) registra a
-regra de evidência duplicada em Python e JavaScript: ambas precisam mudar juntas.
+regra de evidência duplicada em Python e JavaScript: a emenda 0.7.0 rejeita o
+endpoint e impede divergência via corpus compartilhado.
 [ADR 0007](../decisions/0007-duas-avaliacoes-antes-da-mitigacao.md) registra as duas
 avaliações consecutivas, sem promessa de atraso fixo nem de janelas independentes.
-Esses limites fazem parte da arquitetura documentada; não foram corrigidos ou
-ampliados nesta etapa.
+[ADR 0008](../decisions/0008-deteccao-ampla-mitigacao-restrita.md) registra detecção
+ampla e mitigação restrita.
+
+A API expõe `GET /api/devices/<mac>/history` (série `risk_evaluated` persistida;
+default 100, teto 500). A poda da tabela `events` é o subcomando
+`python -m netsentinel.api prune --keep-days DIAS [--confirm]`: dry-run conta,
+`--confirm` apaga e audita. O MAC reservado `02:00:00:00:00:00` satisfaz a FK
+de auditoria, não aparece em `devices()` e `change_reputation` o rejeita.
