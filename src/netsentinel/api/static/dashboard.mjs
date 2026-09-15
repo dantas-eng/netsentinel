@@ -218,6 +218,29 @@ async function loadDetails() {
     calibration = data.calibrations[0] || null; renderDetails();
   } catch (error) { if (epoch === version && selected === mac) fail(error, 'detail-message'); }
 }
+function renderObserved(d) {
+  const section = node('section', undefined, 'detail-section');
+  section.append(node('h3', 'Evidência observada'));
+  section.append(node('p', 'Não entra na inferência fuzzy.', 'muted'));
+  const observed = snapshot?.devices?.[d.mac] || {};
+  const protocols = Object.entries(observed.protocols || {})
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+    .map(([name, count]) => `${name} ${fmt(count)}`)
+    .join(', ') || '—';
+  const ips = Array.isArray(observed.claimed_ips) ? observed.claimed_ips : [];
+  const total = Number.isFinite(observed.claimed_ips_total) ? observed.claimed_ips_total : ips.length;
+  let ipText = ips.join(', ') || '—';
+  if (total > ips.length) ipText += ` (+${total - ips.length})`;
+  const facts = node('dl', undefined, 'facts');
+  const rows = [['Protocolos', protocols], ['IPs observados', ipText]];
+  const ratio = d.risk?.inputs?.arp_reply_ratio;
+  if (Number.isFinite(ratio)) rows.push(['Proporção de replies ARP', fmt(ratio)]);
+  for (const [label, value] of rows) {
+    const row = node('div'); row.append(node('dt', label), node('dd', value)); facts.append(row);
+  }
+  section.append(facts);
+  return section;
+}
 function renderDetails() {
   const d = devices.find(d => d.mac === selected); if (!d) return;
   const entries = [['Reputação', reputations[d.reputation]], ['Risco', `${fmt(d.risk?.score)} · ${riskStyle(d.risk).label}`],
@@ -226,7 +249,7 @@ function renderDetails() {
     ['Baseline', d.baseline_bps == null ? 'Indisponível' : `${fmt(d.baseline_bps)} bytes/s`]];
   const dl = node('dl', undefined, 'facts');
   for (const [label, value] of entries) { const row = node('div'); row.append(node('dt', label), node('dd', value)); dl.append(row); }
-  $('detail-data').replaceChildren(dl);
+  $('detail-data').replaceChildren(dl, renderObserved(d));
   $('reputation-help').textContent = d.reputation === 'known' ? 'Revogar retorna este MAC a Novo e cancela a calibração ativa.' : 'Confirme somente após reconhecer este dispositivo. Não há promoção automática por score.';
   $('reputation-submit').textContent = d.reputation === 'known' ? 'Revogar reconhecimento' : 'Confirmar dispositivo';
   const names = {collecting: 'Coletando', completed: 'Concluída', cancelled: 'Cancelada', interrupted: 'Interrompida'};
