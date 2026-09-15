@@ -81,23 +81,51 @@ export function graphData(topology) {
   return {nodes: [...nodes.values()], edges};
 }
 
+const messages = {
+  readings_unavailable: 'Aguardando duas leituras comparáveis.',
+  agent_run_changed: 'Agente ou alvo mudou; inicie uma nova comparação.',
+  target_changed: 'Agente ou alvo mudou; inicie uma nova comparação.',
+  environment_changed: 'Agente ou alvo mudou; inicie uma nova comparação.',
+  invalid_interval: 'Leituras sem intervalo de tempo válido.',
+  counter_unavailable: 'Contador indisponível ou reiniciado.',
+  counter_reset: 'Contador indisponível ou reiniciado.',
+  mitigation_not_confirmed: 'As duas leituras não confirmam ARP estático e bloqueio.',
+  packets_passed: 'Houve pacotes entregues após o filtro neste intervalo.',
+  no_traffic: 'Sem descartes com tráfego ativo: zero entregue sozinho não prova bloqueio.',
+  verified: 'Há descartes e zero pacotes entregues após o filtro neste intervalo. Ping exige verificação separada.',
+};
+
 export function counterInterval(before, after) {
-  const unavailable = reason => ({comparable: false, reason, deltas: null});
-  if (!before || !after) return unavailable('Aguardando duas leituras comparáveis.');
-  if (before.run_id !== after.run_id || before.attacker_mac !== after.attacker_mac ||
-      Boolean(before.simulated) !== Boolean(after.simulated)) return unavailable('Agente ou alvo mudou; inicie uma nova comparação.');
-  if (!(after.timestamp > before.timestamp)) return unavailable('Leituras sem intervalo de tempo válido.');
+  const unavailable = reason_code => ({
+    comparable: false, reason_code, reason: messages[reason_code], deltas: null,
+  });
+  if (!before || !after) return unavailable('readings_unavailable');
+  if (before.run_id !== after.run_id) return unavailable('agent_run_changed');
+  if (before.attacker_mac !== after.attacker_mac) return unavailable('target_changed');
+  if (Boolean(before.simulated) !== Boolean(after.simulated)) return unavailable('environment_changed');
+  if (!(after.timestamp > before.timestamp)) return unavailable('invalid_interval');
   const names = ['seen', 'dropped', 'passed'];
   const deltas = {};
   for (const name of names) {
     const a = after.counters?.[name]?.packets, b = before.counters?.[name]?.packets;
-    if (!Number.isFinite(a) || !Number.isFinite(b) || a < b || b < 0) return unavailable('Contador indisponível ou reiniciado.');
+    if (!Number.isFinite(a) || !Number.isFinite(b) || a < 0 || b < 0) {
+      return unavailable('counter_unavailable');
+    }
+    if (a < b) return unavailable('counter_reset');
     deltas[name] = a - b;
   }
   const confirmed = [before, after].every(e => e.mitigated === true && e.blocked === true && e.arp_static_correct === true);
-  const reason = !confirmed ? 'As duas leituras não confirmam ARP estático e bloqueio.' :
-    deltas.passed > 0 ? 'Houve pacotes entregues após o filtro neste intervalo.' :
-    deltas.seen === 0 || deltas.dropped === 0 ? 'Sem descartes com tráfego ativo: zero entregue sozinho não prova bloqueio.' :
-    'Há descartes e zero pacotes entregues após o filtro neste intervalo. Ping exige verificação separada.';
-  return {comparable: true, reason, deltas};
+  let reason_code = null;
+  let reason = messages.verified;
+  if (!confirmed) {
+    reason_code = 'mitigation_not_confirmed';
+    reason = messages.mitigation_not_confirmed;
+  } else if (deltas.passed > 0) {
+    reason_code = 'missing_drops_or_traffic_passed';
+    reason = messages.packets_passed;
+  } else if (deltas.seen === 0 || deltas.dropped === 0) {
+    reason_code = 'missing_drops_or_traffic_passed';
+    reason = messages.no_traffic;
+  }
+  return {comparable: true, reason_code, reason, deltas};
 }
