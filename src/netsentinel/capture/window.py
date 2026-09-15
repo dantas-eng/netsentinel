@@ -5,6 +5,8 @@ contagens brutas: reputação, baseline e intensidade de conflito pertencem à a
 """
 from collections import Counter, deque
 
+CLAIMED_IPS_LIMIT = 10
+
 
 class ObservationWindow:
     def __init__(self, seconds, capacity):
@@ -29,21 +31,32 @@ class ObservationWindow:
     def snapshot(self, now):
         self._expire(now)
         devices, claims, links = {}, Counter(), Counter()
+        claimed = {}
         for _, obs in self.items:
             # Ethernet identifica a origem observada; ARP pode alegar outro MAC.
             device = devices.setdefault(obs.src_mac, dict(
                 packets=0, bytes=0, arp_requests=0, arp_replies=0,
-                first_timestamp=obs.timestamp, last_timestamp=obs.timestamp))
+                first_timestamp=obs.timestamp, last_timestamp=obs.timestamp,
+                protocols={}))
             device["packets"] += 1
             device["bytes"] += obs.size_bytes
             device["first_timestamp"] = min(device["first_timestamp"], obs.timestamp)
             device["last_timestamp"] = max(device["last_timestamp"], obs.timestamp)
+            device["protocols"][obs.protocol] = device["protocols"].get(obs.protocol, 0) + 1
+            if obs.src_ip is not None:
+                ips = claimed.setdefault(obs.src_mac, [])
+                if obs.src_ip not in ips:
+                    ips.append(obs.src_ip)
             links[(obs.src_mac, obs.dst_mac)] += 1
             if obs.arp_operation in (1, 2):
                 device["arp_requests" if obs.arp_operation == 1 else "arp_replies"] += 1
                 # Probe 0.0.0.0 não afirma propriedade de endereço IPv4.
                 if obs.arp_sender_ip != "0.0.0.0":
                     claims[(obs.arp_sender_ip, obs.arp_sender_mac, obs.src_mac)] += 1
+        for mac, device in devices.items():
+            ips = claimed.get(mac, [])
+            device["claimed_ips"] = ips[:CLAIMED_IPS_LIMIT]
+            device["claimed_ips_total"] = len(ips)
         return dict(window_seconds=self.seconds, observations=len(self.items),
                     incomplete=self.last_evicted_at is not None and
                     self.last_evicted_at > now - self.seconds,
