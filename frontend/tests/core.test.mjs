@@ -1,8 +1,11 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {Api, ApiError, EventFeed, graphData, counterInterval, riskStyle} from '../../src/netsentinel/api/static/core.mjs';
+import {Api, ApiError, EventFeed, eventNames, graphData, counterInterval, riskStyle} from '../../src/netsentinel/api/static/core.mjs';
 
 const ok = json => ({ok: true, status: 200, json: async () => json});
+test('eventNames registers threat_unmitigable so the dashboard can display it', () => {
+  assert(eventNames.includes('threat_unmitigable'));
+});
 test('login obtains public CSRF first, preserves cookies and rotates token before mutations', async () => {
   const calls = [];
   const api = new Api(async (path, options) => {

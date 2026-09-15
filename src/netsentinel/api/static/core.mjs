@@ -1,6 +1,7 @@
 /* Contratos puros: testáveis sem navegador, VM ou interface de captura. */
 export const eventNames = ['risk_evaluated', 'mitigation_applied', 'mitigation_status',
-  'mitigation_error', 'reputation_changed', 'baseline_calibrated', 'snapshot_updated', 'source_error'];
+  'mitigation_error', 'reputation_changed', 'baseline_calibrated', 'snapshot_updated', 'source_error',
+  'threat_unmitigable'];
 
 export class ApiError extends Error {
   constructor(status, message) { super(message); this.status = status; }
