@@ -9,7 +9,7 @@ from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
 from netsentinel.api.__main__ import main
 from netsentinel.repositories.database import Database
-from netsentinel.repositories.store import Repository, DomainConflict
+from netsentinel.repositories.store import Repository, DomainConflict, SYSTEM_AUDIT_MAC
 from netsentinel.repositories.models import Base
 from netsentinel.repositories.migrate import upgrade_schema, migration_config
 from netsentinel.analysis.contracts import Reputation
@@ -190,6 +190,7 @@ class RepositoryTests(unittest.TestCase):
         self.assertEqual(result['removed'], 0)
         self.assertEqual(len(self.repo.events()), 2)
         self.assertEqual(self.repo.audits(), [])
+        self.assertEqual(self.repo.devices(), [])
 
     def test_prune_confirm_deletes_old_events_and_audits_window(self):
         now = 1_700_000_000.0
@@ -208,6 +209,24 @@ class RepositoryTests(unittest.TestCase):
         self.assertIn('1', entry['reason'])
         self.assertIn('7', entry['reason'])
         self.assertIn(str(int(result['cutoff'])), entry['reason'])
+
+    def test_prune_confirm_excludes_system_mac_from_devices(self):
+        now = 1_700_000_000.0
+        self._aged_events(now, 10)
+        with patch('netsentinel.repositories.store.time', return_value=now):
+            self.repo.prune_events(7, 'operator', confirm=True)
+        self.assertNotIn(SYSTEM_AUDIT_MAC, [item['mac'] for item in self.repo.devices()])
+        [entry] = self.repo.audits()
+        self.assertEqual(entry['mac'], SYSTEM_AUDIT_MAC)
+        self.assertEqual(entry['action'], 'events_pruned')
+
+    def test_change_reputation_rejects_system_audit_mac(self):
+        now = 1_700_000_000.0
+        self._aged_events(now, 10)
+        with patch('netsentinel.repositories.store.time', return_value=now):
+            self.repo.prune_events(7, 'operator', confirm=True)
+        with self.assertRaises(DomainConflict):
+            self.repo.change_reputation(SYSTEM_AUDIT_MAC, True, 'operator', 'Promover')
 
     def test_prune_rejects_non_int_days_non_bool_confirm_and_below_one(self):
         for keep_days in (1.0, True, 0, -1, '7'):
@@ -232,3 +251,18 @@ class RepositoryTests(unittest.TestCase):
                     main()
         self.assertEqual(len(self.repo.events()), 1)
         self.assertEqual(self.repo.audits(), [])
+
+    def test_cli_prune_confirm_deletes_and_excludes_system_mac(self):
+        now = 1_700_000_000.0
+        old, kept = self._aged_events(now, 10, 1)
+        env = {'DATABASE_URL': self.url, 'OPERATOR_USERNAME': 'operator'}
+        with patch.dict(os.environ, env, clear=False):
+            with patch('netsentinel.repositories.store.time', return_value=now):
+                with patch('sys.argv', ['netsentinel.api', 'prune', '--keep-days', '7', '--confirm']):
+                    main()
+        remaining = self.repo.events()
+        self.assertEqual([item['event_id'] for item in remaining], [kept['event_id']])
+        self.assertNotEqual(old['event_id'], kept['event_id'])
+        [entry] = self.repo.audits()
+        self.assertEqual(entry['action'], 'events_pruned')
+        self.assertNotIn(SYSTEM_AUDIT_MAC, [item['mac'] for item in self.repo.devices()])

@@ -18,12 +18,10 @@ def main():
     sub.add_parser('bootstrap')
     sub.add_parser('serve')
     prune = sub.add_parser('prune')
-    prune.add_argument('--keep-days', dest='keep_days', type=int, default=None)
+    prune.add_argument('--keep-days', dest='keep_days', type=int, required=True)
     prune.add_argument('--confirm', action='store_true')
     args = parser.parse_args()
     if args.action == 'prune':
-        if args.keep_days is None:
-            parser.error('--keep-days é obrigatório')
         url = os.environ['DATABASE_URL']
         if url.startswith('postgresql://'):
             url = url.replace('postgresql://', 'postgresql+psycopg://', 1)

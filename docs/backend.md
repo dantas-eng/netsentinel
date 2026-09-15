@@ -139,6 +139,9 @@ então pulariam essa lacuna no replay — exatamente a falha que o cursor existe
 para impedir. Por isso `python -m netsentinel.api prune --keep-days DIAS` relata
 quantas linhas cairiam fora da janela (`removed=0`) e só apaga com `--confirm`,
 registrando auditoria `events_pruned`. `--keep-days` é obrigatório, sem default.
+A linha de auditoria usa o MAC reservado `02:00:00:00:00:00` (unicast LAA) só
+para satisfazer a FK `Audit.mac`. Esse endereço não aparece em `/api/devices`
+nem na topologia e não pode ser promovido a KNOWN.
 
 ## Cloud, separado do laboratório
 
