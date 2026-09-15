@@ -62,7 +62,13 @@ class DashboardTests(unittest.TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.headers['Cache-Control'], 'no-store')
                 self.assertEqual(response.headers['X-Content-Type-Options'], 'nosniff')
-        self.assertEqual(self.client.get('/').headers['X-Frame-Options'], 'DENY')
+        home = self.client.get('/')
+        self.assertEqual(home.headers['X-Frame-Options'], 'DENY')
+        csp = home.headers['Content-Security-Policy']
+        self.assertIn("default-src 'self'", csp)
+        self.assertIn("script-src 'self'", csp)
+        csrf = self.client.get('/api/auth/csrf')
+        self.assertIn("default-src 'self'", csrf.headers['Content-Security-Policy'])
 
     def test_offline_bundles_keep_versions_and_license_notices(self):
         manifest = self.client.get('/static/vendor/versions.json').json

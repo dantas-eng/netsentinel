@@ -2,7 +2,6 @@
 """Verifica links relativos Markdown contra arquivos existentes."""
 from pathlib import Path
 import re
-import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 PATTERN = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
