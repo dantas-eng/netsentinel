@@ -131,12 +131,32 @@ class FeatureTests(unittest.TestCase):
         result = self.make_extractor().extract(data)['aa']
         self.assertEqual(result.conflict, 0.5)
 
+    def test_pure_poisoner_reply_ratio_is_one(self):
+        result = self.make_extractor().extract(snapshot())['aa']
+        self.assertEqual(result.arp_reply_ratio, 1.0)
+
+    def test_balanced_reply_ratio_is_half(self):
+        data = snapshot(devices={'aa': dict(bytes=1000, arp_requests=25, arp_replies=25)})
+        result = self.make_extractor().extract(data)['aa']
+        self.assertEqual(result.arp_reply_ratio, 0.5)
+
+    def test_no_arp_ratio_unavailable(self):
+        data = snapshot(devices={'aa': dict(bytes=1000, arp_requests=0, arp_replies=0)})
+        result = self.make_extractor().extract(data)['aa']
+        self.assertIsNone(result.arp_reply_ratio)
+        self.assertIn('arp_reply_ratio_unavailable', result.missing_reasons)
+
+    def test_incomplete_window_forces_ratio_none(self):
+        result = self.make_extractor().extract(snapshot(incomplete=True))['aa']
+        self.assertIsNone(result.arp_reply_ratio)
+
     def test_capture_quality_becomes_missing_memberships(self):
         for flag in ('incomplete', 'warming_up'):
             result = self.make_extractor().extract(snapshot(**{flag: True}))['aa']
             self.assertIsNone(result.conflict)
             self.assertIsNone(result.arp_frequency)
             self.assertIsNone(result.volume_deviation)
+            self.assertIsNone(result.arp_reply_ratio)
             self.assertIsNone(infer(result).score)
 
     def test_reputation_provider_unknown_is_missing(self):
