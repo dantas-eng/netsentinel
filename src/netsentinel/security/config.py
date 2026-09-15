@@ -83,6 +83,10 @@ class LabConfig:
     def fingerprint(self):
         return hashlib.sha256(json.dumps(asdict(self), sort_keys=True).encode()).hexdigest()
 
+    def trusted_bindings(self):
+        return {self.victim_ip: self.victim_mac, self.gateway_ip: self.gateway_mac,
+                self.attacker_ip: self.attacker_mac, self.sensor_internal_ip: self.sensor_internal_mac}
+
     def require_attacker(self, mac):
         mac = validate_mac(mac)
         if mac != self.attacker_mac:

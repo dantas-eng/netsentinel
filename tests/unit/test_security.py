@@ -224,6 +224,28 @@ class SecurityTests(unittest.TestCase):
         demo.consume(dict(timestamp=1, arp_claims=[]))
         mitigation.apply.assert_not_called()
 
+    def test_lab_config_trusted_bindings_maps_four_validated_pairs(self):
+        self.assertEqual(self.config.trusted_bindings(), {
+            self.config.victim_ip: self.config.victim_mac,
+            self.config.gateway_ip: self.config.gateway_mac,
+            self.config.attacker_ip: self.config.attacker_mac,
+            self.config.sensor_internal_ip: self.config.sensor_internal_mac,
+        })
+
+    def test_synthetic_identity_trusted_bindings_use_test_net_1(self):
+        from netsentinel.services.synthetic import SyntheticIdentity
+        identity = SyntheticIdentity()
+        self.assertEqual(identity.victim_ip, '192.0.2.2')
+        self.assertEqual(identity.attacker_ip, '192.0.2.3')
+        self.assertEqual(identity.sensor_internal_ip, '192.0.2.4')
+        self.assertEqual(identity.gateway_ip, '192.0.2.1')
+        self.assertEqual(identity.trusted_bindings(), {
+            '192.0.2.1': identity.gateway_mac,
+            '192.0.2.2': identity.victim_mac,
+            '192.0.2.3': identity.attacker_mac,
+            '192.0.2.4': identity.sensor_internal_mac,
+        })
+
 
 class EvidenceTests(unittest.TestCase):
     def samples(self):

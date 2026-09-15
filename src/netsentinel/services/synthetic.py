@@ -11,6 +11,13 @@ class SyntheticIdentity:
     attacker_mac: str = '02:00:00:00:00:30'
     sensor_internal_mac: str = '02:00:00:00:00:40'
     gateway_ip: str = '192.0.2.1'
+    victim_ip: str = '192.0.2.2'
+    attacker_ip: str = '192.0.2.3'
+    sensor_internal_ip: str = '192.0.2.4'
+
+    def trusted_bindings(self):
+        return {self.gateway_ip: self.gateway_mac, self.victim_ip: self.victim_mac,
+                self.attacker_ip: self.attacker_mac, self.sensor_internal_ip: self.sensor_internal_mac}
 
 
 class SyntheticMitigation:
