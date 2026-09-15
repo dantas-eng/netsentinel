@@ -4,7 +4,7 @@ from unittest.mock import patch, MagicMock
 from scapy.all import Ether, ARP, IP, ICMP, IPv6, Raw
 from netsentinel.capture.config import CaptureConfig
 from netsentinel.capture.normalizer import normalize
-from netsentinel.capture.window import ObservationWindow
+from netsentinel.capture.window import CLAIMED_IPS_LIMIT, ObservationWindow
 from netsentinel.capture.service import CaptureService
 from netsentinel.capture.scapy_source import ScapySource
 
@@ -94,6 +94,44 @@ class CaptureTests(unittest.TestCase):
         self.assertEqual(snap['devices'][A]['bytes'], 3 * len(packet))
         self.assertEqual(snap['devices'][A]['arp_replies'], 3)
         self.assertEqual(snap['links'][0]['packets'], 3)
+
+    def test_snapshot_counts_protocols(self):
+        window = ObservationWindow(10, 10)
+        window.add(normalize(arp()), 0)
+        window.add(normalize(arp()), 1)
+        window.add(normalize(Ether(src=A, dst=B) / IP(src='192.0.2.1', dst='192.0.2.2') / ICMP()), 2)
+        window.add(normalize(Ether(src=A, dst=B) / IPv6(src='::1', dst='::2')), 3)
+        window.add(normalize(Ether(src=A, dst=B)), 4)
+        self.assertEqual(window.snapshot(4)['devices'][A]['protocols'], {
+            'ARP': 2, 'IPv4': 1, 'IPv6': 1, 'OTHER': 1,
+        })
+
+    def test_snapshot_lists_distinct_claimed_ips_in_first_seen_order(self):
+        window = ObservationWindow(10, 10)
+        window.add(normalize(Ether(src=A, dst=B) / IP(src='192.0.2.10', dst='192.0.2.2') / ICMP()), 0)
+        window.add(normalize(Ether(src=A, dst=B) / IP(src='192.0.2.20', dst='192.0.2.2') / ICMP()), 1)
+        window.add(normalize(Ether(src=A, dst=B) / IP(src='192.0.2.10', dst='192.0.2.2') / ICMP()), 2)
+        device = window.snapshot(2)['devices'][A]
+        self.assertEqual(device['claimed_ips'], ['192.0.2.10', '192.0.2.20'])
+        self.assertEqual(device['claimed_ips_total'], 2)
+
+    def test_snapshot_caps_claimed_ips_and_keeps_total(self):
+        window = ObservationWindow(20, 20)
+        for index in range(12):
+            ip = f'192.0.2.{index + 1}'
+            window.add(normalize(Ether(src=A, dst=B) / IP(src=ip, dst='192.0.2.254') / ICMP()), index)
+        device = window.snapshot(12)['devices'][A]
+        self.assertEqual(device['claimed_ips'], [f'192.0.2.{n}' for n in range(1, 11)])
+        self.assertEqual(device['claimed_ips_total'], 12)
+        self.assertEqual(CLAIMED_IPS_LIMIT, 10)
+        self.assertEqual(len(device['claimed_ips']), CLAIMED_IPS_LIMIT)
+
+    def test_snapshot_device_without_ip_has_empty_claimed_list(self):
+        window = ObservationWindow(10, 10)
+        window.add(normalize(Ether(src=A, dst=B)), 0)
+        device = window.snapshot(0)['devices'][A]
+        self.assertEqual(device['claimed_ips'], [])
+        self.assertEqual(device['claimed_ips_total'], 0)
 
     def test_invalid_configuration(self):
         for seconds in (0, -1, float('nan'), float('inf')):
