@@ -1,6 +1,6 @@
 # ADR 0006 — Dívida técnica: verificação de evidência em Python e JavaScript
 
-Status: dívida conhecida e aceita pelo grupo; não corrigir nesta fase.
+Status: duplicação mantida deliberadamente; divergência impedida por corpus compartilhado.
 Contexto: dashboard 0.5.0 aprovado. Prioridade atual: ensaio nas quatro VMs.
 
 ## Decisão
@@ -47,3 +47,25 @@ Se houver tempo após o ensaio, considerar um endpoint autenticado que reutilize
 frontend. Contrato, tratamento de dados insuficientes e identificação de dados
 sintéticos precisam ser definidos antes dessa alteração. Não criar o endpoint
 nem refatorar agora; esta ADR registra a dívida, sem ampliar o escopo aprovado.
+
+## Emenda (melhorias 0.7.0)
+
+Endpoint autenticado **rejeitado**. O frontend precisa do veredito de forma
+síncrona a cada push de evento. Round-trip por evento adiciona latência e um
+modo de falha indefinido: não há resposta definida para o que a interface
+mostra quando o endpoint expira. Trocaria uma dívida conhecida por um caminho
+de falha desconhecido.
+
+O risco real desta ADR não era duplicação, era **divergência** — e já tinha
+ocorrido. `verify_interval` indexava `after['counters'][name]['packets']` e
+levantava `KeyError` com contador ausente; `counterInterval` usava
+`Number.isFinite` e degradava. A mesma entrada malformada: um estourava, o
+outro degradava. `counterInterval` comparava `simulated`; `verify_interval`
+não comparava nada equivalente.
+
+Duplicação permanece deliberada. Divergência passa a quebrar o build: o corpus
+`tests/fixtures/evidence_cases.json` é lido por `tests/unit/test_evidence_corpus.py`
+e por `frontend/tests/evidence-corpus.test.mjs`. `verify_interval` devolve
+`reason_code` em todo retorno (a chave `reason` conserva o mesmo valor).
+`counterInterval` devolve `{comparable, reason_code, reason, deltas}` — código
+para conformidade, texto em português para a tela.
