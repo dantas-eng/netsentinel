@@ -237,11 +237,16 @@ def report() -> str:
         "",
         "## Varredura de `RATIO_HIGH_FLOOR`",
         "",
-        "| floor | correct | abstention_rate |",
-        "| --- | --- | --- |",
+        "| floor | correct | abstention_rate | misses |",
+        "| --- | --- | --- | --- |",
     ])
     for row in rows:
-        lines.append(f"| {row['floor']} | {row['correct']} | {_pct(row['abstention_rate'])} |")
+        misses = ", ".join(
+            f"{miss['name']}→{_shown(miss['predicted'])}" for miss in row["misses"]
+        ) or "—"
+        lines.append(
+            f"| {row['floor']} | {row['correct']} | {_pct(row['abstention_rate'])} | {misses} |"
+        )
     lines.append("")
     return "\n".join(lines)
 

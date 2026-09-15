@@ -38,10 +38,10 @@ Nenhum desacordo entre rótulo esperado e classificação do motor.
 
 ## Varredura de `RATIO_HIGH_FLOOR`
 
-| floor | correct | abstention_rate |
-| --- | --- | --- |
-| 0.3 | 14 | 0.267 |
-| 0.4 | 14 | 0.267 |
-| 0.5 | 15 | 0.267 |
-| 0.6 | 14 | 0.267 |
-| 0.7 | 14 | 0.267 |
+| floor | correct | abstention_rate | misses |
+| --- | --- | --- | --- |
+| 0.3 | 14 | 0.267 | quiet_new_reply_lean→suspeito |
+| 0.4 | 14 | 0.267 | quiet_new_reply_lean→suspeito |
+| 0.5 | 15 | 0.267 | — |
+| 0.6 | 14 | 0.267 | quiet_known_reply_heavy→confiável |
+| 0.7 | 14 | 0.267 | quiet_known_reply_heavy→confiável |
