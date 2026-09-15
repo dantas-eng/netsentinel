@@ -5,7 +5,8 @@ const api = new Api();
 const labels = {risk_evaluated: 'Risco avaliado', mitigation_applied: 'Mitigação aplicada',
   mitigation_status: 'Estado da mitigação', mitigation_error: 'Falha na mitigação',
   reputation_changed: 'Reputação alterada', baseline_calibrated: 'Baseline calibrado',
-  snapshot_updated: 'Captura atualizada', source_error: 'Fonte interrompida'};
+  snapshot_updated: 'Captura atualizada', source_error: 'Fonte interrompida',
+  threat_unmitigable: 'Ameaça sem mitigação autorizada'};
 const reputations = {known: 'Reconhecido', new: 'Novo', unknown: 'Sem informação'};
 const actions = {confirm: 'Dispositivo confirmado', revoke: 'Reconhecimento revogado', bootstrap: 'Inventário importado',
   calibration_started: 'Calibração iniciada', calibration_completed: 'Calibração concluída'};
