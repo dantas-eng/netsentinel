@@ -1,0 +1,352 @@
+{
+  "cases": [
+    {
+      "name": "verified_happy_path",
+      "before": {
+        "timestamp": 1,
+        "run_id": "agent-1",
+        "attacker_mac": "aa",
+        "mitigated": true,
+        "blocked": true,
+        "arp_static_correct": true,
+        "counters": {
+          "seen": {"packets": 10},
+          "dropped": {"packets": 10},
+          "passed": {"packets": 10}
+        }
+      },
+      "after": {
+        "timestamp": 2,
+        "run_id": "agent-1",
+        "attacker_mac": "aa",
+        "mitigated": true,
+        "blocked": true,
+        "arp_static_correct": true,
+        "counters": {
+          "seen": {"packets": 15},
+          "dropped": {"packets": 15},
+          "passed": {"packets": 10}
+        }
+      },
+      "expected": {"verified": true, "reason_code": null}
+    },
+    {
+      "name": "agent_run_changed",
+      "before": {
+        "timestamp": 1,
+        "run_id": "agent-1",
+        "attacker_mac": "aa",
+        "mitigated": true,
+        "blocked": true,
+        "arp_static_correct": true,
+        "counters": {
+          "seen": {"packets": 10},
+          "dropped": {"packets": 10},
+          "passed": {"packets": 10}
+        }
+      },
+      "after": {
+        "timestamp": 2,
+        "run_id": "agent-2",
+        "attacker_mac": "aa",
+        "mitigated": true,
+        "blocked": true,
+        "arp_static_correct": true,
+        "counters": {
+          "seen": {"packets": 15},
+          "dropped": {"packets": 15},
+          "passed": {"packets": 10}
+        }
+      },
+      "expected": {"verified": false, "reason_code": "agent_run_changed"}
+    },
+    {
+      "name": "target_changed",
+      "before": {
+        "timestamp": 1,
+        "run_id": "agent-1",
+        "attacker_mac": "aa",
+        "mitigated": true,
+        "blocked": true,
+        "arp_static_correct": true,
+        "counters": {
+          "seen": {"packets": 10},
+          "dropped": {"packets": 10},
+          "passed": {"packets": 10}
+        }
+      },
+      "after": {
+        "timestamp": 2,
+        "run_id": "agent-1",
+        "attacker_mac": "bb",
+        "mitigated": true,
+        "blocked": true,
+        "arp_static_correct": true,
+        "counters": {
+          "seen": {"packets": 15},
+          "dropped": {"packets": 15},
+          "passed": {"packets": 10}
+        }
+      },
+      "expected": {"verified": false, "reason_code": "target_changed"}
+    },
+    {
+      "name": "environment_changed",
+      "before": {
+        "timestamp": 1,
+        "run_id": "agent-1",
+        "attacker_mac": "aa",
+        "mitigated": true,
+        "blocked": true,
+        "arp_static_correct": true,
+        "counters": {
+          "seen": {"packets": 10},
+          "dropped": {"packets": 10},
+          "passed": {"packets": 10}
+        }
+      },
+      "after": {
+        "timestamp": 2,
+        "run_id": "agent-1",
+        "attacker_mac": "aa",
+        "simulated": true,
+        "mitigated": true,
+        "blocked": true,
+        "arp_static_correct": true,
+        "counters": {
+          "seen": {"packets": 15},
+          "dropped": {"packets": 15},
+          "passed": {"packets": 10}
+        }
+      },
+      "expected": {"verified": false, "reason_code": "environment_changed"}
+    },
+    {
+      "name": "invalid_interval",
+      "before": {
+        "timestamp": 2,
+        "run_id": "agent-1",
+        "attacker_mac": "aa",
+        "mitigated": true,
+        "blocked": true,
+        "arp_static_correct": true,
+        "counters": {
+          "seen": {"packets": 10},
+          "dropped": {"packets": 10},
+          "passed": {"packets": 10}
+        }
+      },
+      "after": {
+        "timestamp": 2,
+        "run_id": "agent-1",
+        "attacker_mac": "aa",
+        "mitigated": true,
+        "blocked": true,
+        "arp_static_correct": true,
+        "counters": {
+          "seen": {"packets": 15},
+          "dropped": {"packets": 15},
+          "passed": {"packets": 10}
+        }
+      },
+      "expected": {"verified": false, "reason_code": "invalid_interval"}
+    },
+    {
+      "name": "counter_reset",
+      "before": {
+        "timestamp": 1,
+        "run_id": "agent-1",
+        "attacker_mac": "aa",
+        "mitigated": true,
+        "blocked": true,
+        "arp_static_correct": true,
+        "counters": {
+          "seen": {"packets": 10},
+          "dropped": {"packets": 10},
+          "passed": {"packets": 10}
+        }
+      },
+      "after": {
+        "timestamp": 20,
+        "run_id": "agent-1",
+        "attacker_mac": "aa",
+        "mitigated": true,
+        "blocked": true,
+        "arp_static_correct": true,
+        "counters": {
+          "seen": {"packets": 2},
+          "dropped": {"packets": 2},
+          "passed": {"packets": 0}
+        }
+      },
+      "expected": {"verified": false, "reason_code": "counter_reset"}
+    },
+    {
+      "name": "counter_unavailable",
+      "before": {
+        "timestamp": 1,
+        "run_id": "agent-1",
+        "attacker_mac": "aa",
+        "mitigated": true,
+        "blocked": true,
+        "arp_static_correct": true,
+        "counters": {
+          "seen": {"packets": 10},
+          "dropped": {"packets": 10},
+          "passed": {"packets": 10}
+        }
+      },
+      "after": {
+        "timestamp": 2,
+        "run_id": "agent-1",
+        "attacker_mac": "aa",
+        "mitigated": true,
+        "blocked": true,
+        "arp_static_correct": true,
+        "counters": {
+          "dropped": {"packets": 15},
+          "passed": {"packets": 10}
+        }
+      },
+      "expected": {"verified": false, "reason_code": "counter_unavailable"}
+    },
+    {
+      "name": "mitigation_not_confirmed",
+      "before": {
+        "timestamp": 1,
+        "run_id": "agent-1",
+        "attacker_mac": "aa",
+        "mitigated": true,
+        "blocked": true,
+        "arp_static_correct": true,
+        "counters": {
+          "seen": {"packets": 10},
+          "dropped": {"packets": 10},
+          "passed": {"packets": 10}
+        }
+      },
+      "after": {
+        "timestamp": 2,
+        "run_id": "agent-1",
+        "attacker_mac": "aa",
+        "mitigated": true,
+        "blocked": true,
+        "arp_static_correct": false,
+        "counters": {
+          "seen": {"packets": 15},
+          "dropped": {"packets": 15},
+          "passed": {"packets": 10}
+        }
+      },
+      "expected": {"verified": false, "reason_code": "mitigation_not_confirmed"}
+    },
+    {
+      "name": "missing_drops_or_traffic_passed",
+      "before": {
+        "timestamp": 1,
+        "run_id": "agent-1",
+        "attacker_mac": "aa",
+        "mitigated": true,
+        "blocked": true,
+        "arp_static_correct": true,
+        "counters": {
+          "seen": {"packets": 10},
+          "dropped": {"packets": 10},
+          "passed": {"packets": 10}
+        }
+      },
+      "after": {
+        "timestamp": 2,
+        "run_id": "agent-1",
+        "attacker_mac": "aa",
+        "mitigated": true,
+        "blocked": true,
+        "arp_static_correct": true,
+        "counters": {
+          "seen": {"packets": 20},
+          "dropped": {"packets": 20},
+          "passed": {"packets": 12}
+        }
+      },
+      "expected": {"verified": false, "reason_code": "missing_drops_or_traffic_passed"}
+    },
+    {
+      "name": "no_traffic",
+      "before": {
+        "timestamp": 1,
+        "run_id": "agent-1",
+        "attacker_mac": "aa",
+        "mitigated": true,
+        "blocked": true,
+        "arp_static_correct": true,
+        "counters": {
+          "seen": {"packets": 10},
+          "dropped": {"packets": 10},
+          "passed": {"packets": 10}
+        }
+      },
+      "after": {
+        "timestamp": 2,
+        "run_id": "agent-1",
+        "attacker_mac": "aa",
+        "mitigated": true,
+        "blocked": true,
+        "arp_static_correct": true,
+        "counters": {
+          "seen": {"packets": 10},
+          "dropped": {"packets": 10},
+          "passed": {"packets": 10}
+        }
+      },
+      "expected": {"verified": false, "reason_code": "missing_drops_or_traffic_passed"}
+    },
+    {
+      "name": "readings_unavailable",
+      "before": null,
+      "after": {
+        "timestamp": 1,
+        "run_id": "agent-1",
+        "attacker_mac": "aa",
+        "mitigated": true,
+        "blocked": true,
+        "arp_static_correct": true,
+        "counters": {
+          "seen": {"packets": 0},
+          "dropped": {"packets": 0},
+          "passed": {"packets": 0}
+        }
+      },
+      "expected": {"verified": false, "reason_code": "readings_unavailable"}
+    },
+    {
+      "name": "counter_unavailable_non_numeric",
+      "before": {
+        "timestamp": 1,
+        "run_id": "agent-1",
+        "attacker_mac": "aa",
+        "mitigated": true,
+        "blocked": true,
+        "arp_static_correct": true,
+        "counters": {
+          "seen": {"packets": 10},
+          "dropped": {"packets": 10},
+          "passed": {"packets": 10}
+        }
+      },
+      "after": {
+        "timestamp": 2,
+        "run_id": "agent-1",
+        "attacker_mac": "aa",
+        "mitigated": true,
+        "blocked": true,
+        "arp_static_correct": true,
+        "counters": {
+          "seen": {"packets": "x"},
+          "dropped": {"packets": 15},
+          "passed": {"packets": 10}
+        }
+      },
+      "expected": {"verified": false, "reason_code": "counter_unavailable"}
+    }
+  ]
+}
