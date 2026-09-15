@@ -231,7 +231,18 @@ function renderDetails() {
   const names = {collecting: 'Coletando', completed: 'Concluída', cancelled: 'Cancelada', interrupted: 'Interrompida'};
   $('calibration-state').textContent = calibration ? `${names[calibration.status] || calibration.status} · ${calibration.samples.length}/5 janelas aceitas` : 'Nenhuma calibração registrada.';
   $('calibrate').textContent = d.baseline_bps == null ? 'Iniciar calibração' : 'Recalibrar baseline';
-  $('calibrate').disabled = d.reputation !== 'known' || calibration?.status === 'collecting' || !status?.source_running;
+  const blocked = d.reputation !== 'known'
+    ? 'Confirme o dispositivo como conhecido antes de calibrar.'
+    : calibration?.status === 'collecting'
+      ? 'Calibração em coleta; aguarde as cinco janelas.'
+      : !status?.source_running
+        ? 'A fonte está parada; a calibração precisa de janelas novas.'
+        : '';
+  $('calibrate').disabled = Boolean(blocked);
+  $('calibrate').title = blocked;
+  const reason = $('calibrate-reason');
+  reason.textContent = blocked;
+  reason.hidden = !blocked;
 }
 $('login-form').addEventListener('submit', async event => {
   event.preventDefault(); $('login-button').disabled = true; message('Entrando…', 'login-message');
