@@ -190,6 +190,13 @@ def create_app(settings: Settings, lab_config=None, database=None, mitigation=No
             raise ValueError('Paginação inválida.')
         return jsonify(events=repository.events(after_id, limit))
 
+    @app.get('/api/devices/<mac>/history')
+    def device_history(mac):
+        limit = int(request.args.get('limit', 100))
+        if not 1 <= limit <= 500:
+            raise ValueError('Paginação inválida.')
+        return jsonify(history=repository.risk_history(mac, limit))
+
     @app.get('/api/audit')
     def audits():
         return jsonify(audit=repository.audits())

@@ -130,3 +130,18 @@ export function counterInterval(before, after) {
   }
   return {comparable: true, reason_code, reason, deltas};
 }
+
+export function sparkline(points, width, height, options = {}) {
+  const scores = [];
+  for (const point of points || []) {
+    if (Number.isFinite(point?.score)) scores.push(point.score);
+  }
+  if (!scores.length) return {path: '', markers: [], empty: true, width, height};
+  const clamp = score => Math.min(100, Math.max(0, score));
+  const step = scores.length === 1 ? 0 : width / (scores.length - 1);
+  const markers = scores.map((score, index) => ({
+    x: index * step, y: height * (1 - clamp(score) / 100),
+  }));
+  const path = markers.map((mark, index) => `${index ? 'L' : 'M'} ${mark.x} ${mark.y}`).join(' ');
+  return {path, markers, empty: false, width, height};
+}

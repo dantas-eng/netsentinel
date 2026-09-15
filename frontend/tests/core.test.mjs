@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {Api, ApiError, EventFeed, eventNames, graphData, counterInterval, riskStyle} from '../../src/netsentinel/api/static/core.mjs';
+import {Api, ApiError, EventFeed, eventNames, graphData, counterInterval, riskStyle, sparkline} from '../../src/netsentinel/api/static/core.mjs';
 
 const ok = json => ({ok: true, status: 200, json: async () => json});
 test('eventNames registers threat_unmitigable so the dashboard can display it', () => {
@@ -81,4 +81,29 @@ test('delivery after filtering and unconfirmed static ARP remain explicit failur
   const passed = reading(10); passed.counters.passed.packets = 2;
   assert(counterInterval(reading(), passed).reason.includes('Houve pacotes entregues'));
   assert(counterInterval(reading(), reading(10, {arp_static_correct: false})).reason.includes('não confirmam'));
+});
+test('sparkline is empty without a path when no finite scores remain', () => {
+  const blank = sparkline([], 120, 40);
+  assert.deepEqual(blank, {path: '', markers: [], empty: true, width: 120, height: 40});
+  assert.equal(sparkline([{score: NaN}, {score: Infinity}, {score: undefined}], 120, 40).empty, true);
+});
+test('sparkline places a single finite score and inverts the Y axis', () => {
+  const result = sparkline([{score: 50, timestamp: 9}], 100, 40);
+  assert.equal(result.empty, false);
+  assert.equal(result.path, 'M 0 20');
+  assert.equal(result.markers.length, 1);
+  assert.equal(result.markers[0].x, 0);
+  assert.equal(result.markers[0].y, 20);
+});
+test('sparkline spaces X by sample index and saturates scores outside 0-100', () => {
+  const result = sparkline([
+    {score: -20, timestamp: 100},
+    {score: Number.NaN},
+    {score: 50, timestamp: 1},
+    {score: 150, timestamp: 50},
+  ], 100, 40);
+  assert.equal(result.markers.length, 3);
+  assert.deepEqual(result.markers.map(m => m.x), [0, 50, 100]);
+  assert.deepEqual(result.markers.map(m => m.y), [40, 20, 0]);
+  assert.equal(result.path, 'M 0 40 L 50 20 L 100 0');
 });

@@ -165,3 +165,28 @@ class BackendTests(unittest.TestCase):
         capture.emit()
         self.assertIn('mitigation_status',[m['name'] for m in socket.get_received()])
         socket.disconnect()
+
+    def test_device_history_requires_session_and_rejects_limit_outside_range(self):
+        url = f'/api/devices/{MAC}/history'
+        self.assertEqual(self.client.get(url).status_code, 401)
+        login(self.client)
+        self.assertEqual(self.client.get(f'{url}?limit=0').status_code, 400)
+        self.assertEqual(self.client.get(f'{url}?limit=501').status_code, 400)
+        self.assertEqual(self.client.get('/api/devices/not-a-mac/history').status_code, 400)
+
+    def test_device_history_returns_extracted_score_series(self):
+        login(self.client)
+        first = self.repo.append_event(dict(
+            event='risk_evaluated', timestamp=20,
+            devices={MAC: dict(score=12, classification='confiável')}))
+        self.repo.append_event(dict(event='snapshot_updated', timestamp=21, devices={}))
+        second = self.repo.append_event(dict(
+            event='risk_evaluated', timestamp=22,
+            devices={MAC: dict(score=70, classification='suspeito')}))
+        response = self.client.get(f'/api/devices/{MAC}/history?limit=100')
+        self.assertEqual(response.status_code, 200)
+        history = response.json['history']
+        self.assertEqual(history, [
+            dict(event_id=first['event_id'], timestamp=20, score=12, classification='confiável'),
+            dict(event_id=second['event_id'], timestamp=22, score=70, classification='suspeito'),
+        ])

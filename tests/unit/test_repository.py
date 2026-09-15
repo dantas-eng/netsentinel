@@ -142,3 +142,31 @@ class RepositoryTests(unittest.TestCase):
         sql = cfg.output_buffer.getvalue()
         self.assertIn('CREATE TABLE baselines',sql)
         self.assertIn('CREATE TABLE calibrations',sql)
+
+    def _risk(self, mac, score, classification='suspeito', timestamp=1.0):
+        return self.repo.append_event(dict(
+            event='risk_evaluated', timestamp=timestamp,
+            devices={mac: dict(score=score, classification=classification)}))
+
+    def test_risk_history_extracts_series_asc_and_skips_unusable_points(self):
+        other = '02:00:00:00:00:21'
+        first = self._risk(MAC, 10, 'confiável', timestamp=10)
+        self.repo.append_event(dict(event='mitigation_applied', timestamp=11,
+                                    devices={MAC: dict(score=99, classification='suspeito')}))
+        self._risk(MAC, None, None, timestamp=12)
+        self.repo.append_event(dict(event='risk_evaluated', timestamp=13, devices={MAC: 'ignored'}))
+        self._risk(other, 80, 'suspeito', timestamp=14)
+        second = self._risk(MAC, 40, 'desconhecido', timestamp=15)
+        third = self._risk(MAC, 90, 'suspeito', timestamp=16)
+        history = self.repo.risk_history(MAC, limit=100)
+        self.assertEqual([item['event_id'] for item in history],
+                         [first['event_id'], second['event_id'], third['event_id']])
+        self.assertEqual([item['score'] for item in history], [10, 40, 90])
+        self.assertEqual([item['classification'] for item in history],
+                         ['confiável', 'desconhecido', 'suspeito'])
+        self.assertEqual([item['timestamp'] for item in history], [10, 15, 16])
+        newest = self.repo.risk_history(MAC, limit=2)
+        self.assertEqual([item['event_id'] for item in newest],
+                         [second['event_id'], third['event_id']])
+        with self.assertRaises(ValueError):
+            self.repo.risk_history('not-a-mac')
