@@ -4,7 +4,9 @@ import numpy as np
 import skfuzzy as fuzz
 from netsentinel.analysis.models import RiskInputs
 
-# Provisório até Task 15 (varredura do limiar).
+# Justificado por docs/validation/fuzzy-metrics.md: maior correct (15/15
+# só em 0.5; 0.3/0.4 e 0.6/0.7 ficam em 14). abstention_rate empatada
+# (0.267); o desempate por valor mais alto não se aplica.
 RATIO_HIGH_FLOOR = 0.5
 
 

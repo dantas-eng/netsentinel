@@ -40,3 +40,13 @@ entregaria a escolha do alvo a um dado que o atacante controla.
 `tests/unit/test_detection.py` cobre falsificação de cada papel, recusa de MAC
 não pré-aprovado, duas ameaças simultâneas e sequência independente.
 `tests/unit/test_security_consecutive.py` permanece inalterado.
+
+## Limiar da razão de replies
+
+`RATIO_HIGH_FLOOR = 0.5` deixa de ser provisório. A varredura em
+`docs/validation/fuzzy-metrics.md` (0,3 / 0,4 / 0,5 / 0,6 / 0,7) aplica o
+critério (1) maior `correct` (2) menor `abstention_rate` (3) valor mais alto.
+Só 0,5 acerta os 15 cenários: 0,3 e 0,4 classificam `quiet_new_reply_lean`
+como suspeito; 0,6 e 0,7 classificam `quiet_known_reply_heavy` como
+confiável. A taxa de abstenção empata (0,267); o desempate pelo valor mais
+alto não se aplica.
