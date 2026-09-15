@@ -1,4 +1,5 @@
 import io
+import os
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -6,6 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
+from netsentinel.api.__main__ import main
 from netsentinel.repositories.database import Database
 from netsentinel.repositories.store import Repository, DomainConflict
 from netsentinel.repositories.models import Base
@@ -170,3 +172,63 @@ class RepositoryTests(unittest.TestCase):
                          [second['event_id'], third['event_id']])
         with self.assertRaises(ValueError):
             self.repo.risk_history('not-a-mac')
+
+    def _aged_events(self, now, *ages):
+        rows = []
+        for age in ages:
+            rows.append(self.repo.append_event(dict(
+                event='risk_evaluated', timestamp=now - age * 86400, devices={})))
+        return rows
+
+    def test_prune_dry_run_counts_without_deleting_or_auditing(self):
+        now = 1_700_000_000.0
+        self._aged_events(now, 10, 2)
+        with patch('netsentinel.repositories.store.time', return_value=now):
+            result = self.repo.prune_events(7, 'operator', confirm=False)
+        self.assertEqual(result['cutoff'], now - 7 * 86400)
+        self.assertEqual(result['matched'], 1)
+        self.assertEqual(result['removed'], 0)
+        self.assertEqual(len(self.repo.events()), 2)
+        self.assertEqual(self.repo.audits(), [])
+
+    def test_prune_confirm_deletes_old_events_and_audits_window(self):
+        now = 1_700_000_000.0
+        old, kept = self._aged_events(now, 10, 1)
+        with patch('netsentinel.repositories.store.time', return_value=now):
+            result = self.repo.prune_events(7, 'operator', confirm=True)
+        self.assertEqual(result['cutoff'], now - 7 * 86400)
+        self.assertEqual(result['matched'], 1)
+        self.assertEqual(result['removed'], 1)
+        remaining = self.repo.events()
+        self.assertEqual([item['event_id'] for item in remaining], [kept['event_id']])
+        self.assertNotEqual(old['event_id'], kept['event_id'])
+        [entry] = self.repo.audits()
+        self.assertEqual(entry['action'], 'events_pruned')
+        self.assertEqual(entry['actor'], 'operator')
+        self.assertIn('1', entry['reason'])
+        self.assertIn('7', entry['reason'])
+        self.assertIn(str(int(result['cutoff'])), entry['reason'])
+
+    def test_prune_rejects_non_int_days_non_bool_confirm_and_below_one(self):
+        for keep_days in (1.0, True, 0, -1, '7'):
+            with self.subTest(keep_days=keep_days):
+                with self.assertRaises(ValueError):
+                    self.repo.prune_events(keep_days, 'operator')
+        for confirm in (1, 'yes', None):
+            with self.subTest(confirm=confirm):
+                with self.assertRaises(ValueError):
+                    self.repo.prune_events(7, 'operator', confirm=confirm)
+
+    def test_cli_prune_requires_keep_days_and_dry_run_leaves_rows(self):
+        now = 1_700_000_000.0
+        self._aged_events(now, 10)
+        with patch('sys.argv', ['netsentinel.api', 'prune']):
+            with self.assertRaises(SystemExit):
+                main()
+        env = {'DATABASE_URL': self.url, 'OPERATOR_USERNAME': 'operator'}
+        with patch.dict(os.environ, env, clear=False):
+            with patch('netsentinel.repositories.store.time', return_value=now):
+                with patch('sys.argv', ['netsentinel.api', 'prune', '--keep-days', '7']):
+                    main()
+        self.assertEqual(len(self.repo.events()), 1)
+        self.assertEqual(self.repo.audits(), [])

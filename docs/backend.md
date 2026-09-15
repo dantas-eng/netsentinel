@@ -26,6 +26,8 @@ Na raiz do projeto, com o ambiente configurado:
 python -m netsentinel.api migrate
 python -m netsentinel.api bootstrap
 python -m netsentinel.api serve
+python -m netsentinel.api prune --keep-days DIAS
+python -m netsentinel.api prune --keep-days DIAS --confirm
 ```
 
 Executar bootstrap antes de começar a captura. Importa os três nós legítimos da
@@ -128,8 +130,15 @@ assinante não desfaz o evento nem impede os demais.
 
 Ao reconectar, assinar os eventos e consultar `/api/events?after_id=ultimoId`,
 deduplicando por event_id. O histórico tem paginação crescente; continuar pelo
-último ID recebido até esgotar a página. Eventos não têm retenção automática
-nesta versão; dimensionar o disco do laboratório e preservar a evidência da demo.
+último ID recebido até esgotar a página.
+
+A poda da tabela `events` é **manual**, nunca automática. `core.mjs:43` só avança
+o cursor via REST; um push com ID maior não autoriza pular lacuna. Uma poda
+automática poderia apagar linhas acima do cursor de um cliente desconectado, que
+então pulariam essa lacuna no replay — exatamente a falha que o cursor existe
+para impedir. Por isso `python -m netsentinel.api prune --keep-days DIAS` relata
+quantas linhas cairiam fora da janela (`removed=0`) e só apaga com `--confirm`,
+registrando auditoria `events_pruned`. `--keep-days` é obrigatório, sem default.
 
 ## Cloud, separado do laboratório
 

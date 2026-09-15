@@ -1,10 +1,11 @@
-"""Migração, bootstrap explícito e servidor local. Cloud usa a factory WSGI."""
+"""Migração, bootstrap explícito, poda manual e servidor local. Cloud usa a factory WSGI."""
 import argparse
 import os
 from netsentinel.api.settings import Settings
 from netsentinel.api.app import create_app
 from netsentinel.repositories.database import Database
 from netsentinel.repositories.migrate import upgrade_schema
+from netsentinel.repositories.store import Repository
 from netsentinel.security.config import load_config
 from netsentinel.services.runner import SourceRunner
 from netsentinel.services.synthetic import SyntheticIdentity
@@ -12,8 +13,28 @@ from netsentinel.services.synthetic import SyntheticIdentity
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=('migrate', 'bootstrap', 'serve'))
+    sub = parser.add_subparsers(dest='action', required=True)
+    sub.add_parser('migrate')
+    sub.add_parser('bootstrap')
+    sub.add_parser('serve')
+    prune = sub.add_parser('prune')
+    prune.add_argument('--keep-days', dest='keep_days', type=int, default=None)
+    prune.add_argument('--confirm', action='store_true')
     args = parser.parse_args()
+    if args.action == 'prune':
+        if args.keep_days is None:
+            parser.error('--keep-days é obrigatório')
+        url = os.environ['DATABASE_URL']
+        if url.startswith('postgresql://'):
+            url = url.replace('postgresql://', 'postgresql+psycopg://', 1)
+        db = Database(url)
+        try:
+            result = Repository(db).prune_events(
+                args.keep_days, os.environ.get('OPERATOR_USERNAME', 'operator'), args.confirm)
+            print(result)
+        finally:
+            db.engine.dispose()
+        return
     if args.action == 'migrate':
         url = os.environ['DATABASE_URL']
         if url.startswith('postgresql://'):
