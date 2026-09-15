@@ -202,3 +202,20 @@ class Repository:
             rows = session.scalars(select(StoredEvent).where(StoredEvent.id > after_id)
                                    .order_by(StoredEvent.id).limit(limit))
             return [{**row.payload, 'event_id': row.id, 'timestamp': row.timestamp} for row in rows]
+
+    def risk_history(self, mac, limit=100):
+        mac = validate_mac(mac)
+        with self.db.transaction() as session:
+            rows = session.scalars(select(StoredEvent).where(StoredEvent.name == 'risk_evaluated')
+                                   .order_by(StoredEvent.id.desc()).limit(limit))
+            points = []
+            for row in rows:
+                devices = row.payload.get('devices') if isinstance(row.payload, dict) else None
+                if not isinstance(devices, dict):
+                    continue
+                item = devices.get(mac)
+                if not isinstance(item, dict) or item.get('score') is None:
+                    continue
+                points.append(dict(event_id=row.id, timestamp=row.timestamp,
+                                   score=item['score'], classification=item.get('classification')))
+            return sorted(points, key=lambda item: item['event_id'])
