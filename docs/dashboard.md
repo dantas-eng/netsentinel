@@ -1,4 +1,4 @@
-# Dashboard 0.5.0
+# Dashboard 0.6.0
 
 ## Operação
 
@@ -79,7 +79,7 @@ Conteúdo recebido é inserido com textContent, não como HTML executável.
 
 ## Validação desta entrega
 
-- **93 testes Python e Ruff aprovados:** preservam os 90 anteriores, acrescentam
+- **101 testes Python e Ruff aprovados:** preservam os testes anteriores, acrescentam
   shell público/dados privados, assets locais acessíveis, MIME de módulos,
   headers sem cache e avisos de licença.
 - **9 testes JavaScript aprovados:** CSRF antes da credencial e rotação do token,

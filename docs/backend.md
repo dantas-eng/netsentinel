@@ -1,4 +1,4 @@
-# Backend e dashboard 0.5.0 — operação e contratos
+# Backend e dashboard 0.6.0 — operação e contratos
 
 REST Flask, Socket.IO/Observer, repositories SQLAlchemy, calibração persistida e
 sessão do operador implementados. O dashboard visual é servido em `/`.

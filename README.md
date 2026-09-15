@@ -273,7 +273,7 @@ npm test
 npm run build
 ```
 
-9 testes JavaScript aprovados, além dos 93 Python. CI inclui o job frontend.
+9 testes JavaScript aprovados, além dos 101 Python. CI inclui o job frontend.
 Node só é necessário para testes/build antes do isolamento; não para usar a demo.
 Não houve validação visual em navegador nesta entrega. Testes de contratos e de
 assets via Flask não comprovam interação/canvas/WebSocket no navegador real.
