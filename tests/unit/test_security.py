@@ -247,6 +247,39 @@ class SecurityTests(unittest.TestCase):
         })
 
 
+class SyntheticSourceTests(unittest.TestCase):
+    def snapshot_at(self, elapsed):
+        from netsentinel.services.synthetic import SyntheticSource
+        now = [0]
+        source = SyntheticSource(clock=lambda: now[0])
+        now[0] = elapsed
+        return source, source.snapshot()
+
+    def test_after_90s_intruder_spoofs_victim_outside_trusted_bindings(self):
+        from netsentinel.services.synthetic import SyntheticSource
+        source, snap = self.snapshot_at(90)
+        identity = source.identity
+        self.assertTrue(any(
+            claim['source_mac'] == SyntheticSource.INTRUDER_MAC and
+            claim['claimed_mac'] == SyntheticSource.INTRUDER_MAC and
+            claim['ip'] == identity.victim_ip
+            for claim in snap['arp_claims']))
+        self.assertNotIn(SyntheticSource.INTRUDER_MAC, identity.trusted_bindings().values())
+        self.assertTrue(any(
+            claim['source_mac'] == identity.attacker_mac and claim['ip'] == identity.gateway_ip
+            for claim in snap['arp_claims']))
+
+    def test_intruder_absent_before_90s_while_attacker_starts_at_60(self):
+        from netsentinel.services.synthetic import SyntheticSource
+        _, early = self.snapshot_at(59)
+        self.assertEqual(early['arp_claims'], [])
+        source, mid = self.snapshot_at(60)
+        self.assertTrue(all(c['source_mac'] == source.identity.attacker_mac for c in mid['arp_claims']))
+        self.assertFalse(any(c['source_mac'] == SyntheticSource.INTRUDER_MAC for c in mid['arp_claims']))
+        _, late = self.snapshot_at(89)
+        self.assertFalse(any(c['source_mac'] == SyntheticSource.INTRUDER_MAC for c in late['arp_claims']))
+
+
 class EvidenceTests(unittest.TestCase):
     def samples(self):
         before = dict(timestamp=1, run_id='r', attacker_mac='a', mitigated=True,

@@ -44,6 +44,10 @@ class SyntheticMitigation:
 
 
 class SyntheticSource:
+    INTRUDER_MAC = '02:00:00:00:00:50'
+    ATTACK_AFTER_SECONDS = 60
+    INTRUDER_AFTER_SECONDS = 90
+
     def __init__(self, clock=monotonic):
         self.clock, self.started = clock, clock()
         self.run_id = uuid4().hex
@@ -59,13 +63,18 @@ class SyntheticSource:
             devices[mac] = dict(bytes=int((index + 1) * 400 * duration), packets=int(10 * duration),
                                 arp_requests=0, arp_replies=0, first_timestamp=time(), last_timestamp=time())
         # Após 60 s, tráfego sintético anômalo. Todos os eventos permanecem marcados.
-        attacking = elapsed >= 60
+        attacking = elapsed >= self.ATTACK_AFTER_SECONDS
         claims = []
         if attacking:
             devices[self.identity.attacker_mac] = dict(bytes=int(420 * duration), packets=int(10 * duration),
                                                        arp_requests=0, arp_replies=int(10 * duration))
             claims.append(dict(ip=self.identity.gateway_ip, claimed_mac=self.identity.attacker_mac,
                                source_mac=self.identity.attacker_mac, count=int(10 * duration)))
+        if elapsed >= self.INTRUDER_AFTER_SECONDS:
+            devices[self.INTRUDER_MAC] = dict(bytes=int(420 * duration), packets=int(10 * duration),
+                                              arp_requests=0, arp_replies=int(10 * duration))
+            claims.append(dict(ip=self.identity.victim_ip, claimed_mac=self.INTRUDER_MAC,
+                               source_mac=self.INTRUDER_MAC, count=int(10 * duration)))
         return dict(timestamp=time(), source='synthetic', interface='synthetic',
                     window_seconds=8, observed_seconds=duration, warming_up=elapsed < 8,
                     incomplete=False, capture_run_id=self.run_id, window_end_monotonic=now,
