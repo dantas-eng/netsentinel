@@ -2,7 +2,7 @@
 from math import isfinite
 from statistics import median
 from time import time
-from sqlalchemy import select
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import SQLAlchemyError
 from netsentinel.analysis.contracts import Reputation
 from netsentinel.security.config import validate_mac
@@ -11,6 +11,11 @@ from netsentinel.repositories.models import Device, Audit, Calibration, Baseline
 
 class DomainConflict(ValueError):
     pass
+
+
+# Unicast LAA (I/G bit clear, U/L set). Not 00:00:00:00:00:00, not multicast.
+# Exists only so Audit.mac (NOT NULL FK) can record operator actions with no host.
+SYSTEM_AUDIT_MAC = '02:00:00:00:00:00'
 
 
 def audit(session, mac, action, actor, reason):
@@ -69,11 +74,15 @@ class Repository:
 
     def devices(self):
         with self.db.transaction() as session:
-            rows = session.execute(select(Device, Baseline).outerjoin(Baseline).order_by(Device.mac))
+            rows = session.execute(
+                select(Device, Baseline).outerjoin(Baseline)
+                .where(Device.mac != SYSTEM_AUDIT_MAC).order_by(Device.mac))
             return [device_data(device, baseline) for device, baseline in rows]
 
     def change_reputation(self, mac, known, actor, reason):
         mac = validate_mac(mac)
+        if mac == SYSTEM_AUDIT_MAC:
+            raise DomainConflict('Dispositivo ainda não observado.')
         if not reason.strip() or len(reason) > 500:
             raise ValueError('Informe motivo entre 1 e 500 caracteres.')
         with self.db.transaction() as session:
@@ -219,3 +228,25 @@ class Repository:
                 points.append(dict(event_id=row.id, timestamp=row.timestamp,
                                    score=item['score'], classification=item.get('classification')))
             return sorted(points, key=lambda item: item['event_id'])
+
+    def prune_events(self, keep_days, actor, confirm=False):
+        if type(keep_days) is not int or keep_days < 1:
+            raise ValueError('keep_days deve ser inteiro >= 1.')
+        if type(confirm) is not bool:
+            raise ValueError('confirm deve ser bool.')
+        cutoff = time() - keep_days * 86400
+        with self.db.transaction() as session:
+            matched = session.scalar(
+                select(func.count()).select_from(StoredEvent).where(StoredEvent.timestamp < cutoff)
+            ) or 0
+            removed = 0
+            if confirm:
+                session.execute(delete(StoredEvent).where(StoredEvent.timestamp < cutoff))
+                removed = matched
+                mac = SYSTEM_AUDIT_MAC
+                if session.get(Device, mac) is None:
+                    session.add(Device(mac=mac, reputation='new'))
+                    session.flush()
+                audit(session, mac, 'events_pruned', actor,
+                      f'{removed} eventos anteriores a {int(cutoff)} (keep_days={keep_days})')
+            return dict(cutoff=cutoff, matched=matched, removed=removed)
