@@ -45,6 +45,19 @@ jobs:
           PYTHONPATH: src
         run: python tests/run_offline.py
 
+      - name: Harness de métricas fuzzy
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          PYTHONPATH: src
+        run: python tools/fuzzy_metrics.py
+
+      - name: Publicar relatório fuzzy
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzzy-metrics
+          path: docs/validation/fuzzy-metrics.md
+
   frontend:
     name: Frontend offline
     runs-on: ubuntu-latest
