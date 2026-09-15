@@ -45,17 +45,22 @@ class FeatureExtractor:
             if not baseline_valid:
                 reasons.append("baseline_missing_or_nonpositive_or_nonfinite")
 
-            conflict = frequency = deviation = None
+            conflict = frequency = deviation = ratio = None
             if not quality:
                 conflict = max((1 - 1 / len(claims_by_ip[ip])
                                 for ip in ips_by_source[mac.lower()]), default=0.0)
+                total_arp = device["arp_requests"] + device["arp_replies"]
+                if total_arp > 0:
+                    ratio = device["arp_replies"] / total_arp
+                else:
+                    reasons.append("arp_reply_ratio_unavailable")
                 if duration_valid:
-                    frequency = (device["arp_requests"] + device["arp_replies"]) / duration
+                    frequency = total_arp / duration
                     if baseline_valid:
                         rate = device["bytes"] / duration
                         deviation = abs(rate - baseline) / baseline
                 else:
                     reasons.append("observed_duration_unavailable")
             results[mac] = RiskInputs(conflict, frequency, reputation_value,
-                                      deviation, tuple(reasons))
+                                      deviation, ratio, tuple(reasons))
         return results

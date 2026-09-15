@@ -8,6 +8,7 @@ class RiskInputs:
     arp_frequency: float | None
     reputation: str | None
     volume_deviation: float | None
+    arp_reply_ratio: float | None = None
     missing_reasons: tuple[str, ...] = ()
 
 
