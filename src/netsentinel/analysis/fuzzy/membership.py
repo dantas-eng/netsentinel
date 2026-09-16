@@ -4,6 +4,11 @@ import numpy as np
 import skfuzzy as fuzz
 from netsentinel.analysis.models import RiskInputs
 
+# Justificado por docs/validation/fuzzy-metrics.md: maior correct (15/15
+# só em 0.5; 0.3/0.4 e 0.6/0.7 ficam em 14). abstention_rate empatada
+# (0.267); o desempate por valor mais alto não se aplica.
+RATIO_HIGH_FLOOR = 0.5
+
 
 def complementary(value: float | None, saturation: float) -> dict[str, float]:
     if value is None:
@@ -18,6 +23,19 @@ def complementary(value: float | None, saturation: float) -> dict[str, float]:
     }
 
 
+def ramp_from(value: float | None, floor: float, ceiling: float) -> dict[str, float]:
+    if value is None:
+        return {"low": 0.0, "high": 0.0}
+    if not isfinite(value) or value < 0:
+        raise ValueError("Input presente deve ser finito e não negativo.")
+    universe = np.array([floor, ceiling])
+    clipped = min(max(value, floor), ceiling)
+    return {
+        "low": float(fuzz.interp_membership(universe, [1.0, 0.0], clipped)),
+        "high": float(fuzz.interp_membership(universe, [0.0, 1.0], clipped)),
+    }
+
+
 def fuzzify(inputs: RiskInputs) -> dict[str, dict[str, float]]:
     if inputs.reputation not in (None, "known", "new"):
         raise ValueError("Reputação deve ser known, new ou None.")
@@ -25,6 +43,7 @@ def fuzzify(inputs: RiskInputs) -> dict[str, dict[str, float]]:
         "conflict": complementary(inputs.conflict, 1.0),
         "frequency": complementary(inputs.arp_frequency, 5.0),
         "deviation": complementary(inputs.volume_deviation, 1.0),
+        "ratio": ramp_from(inputs.arp_reply_ratio, RATIO_HIGH_FLOOR, 1.0),
         "reputation": {"known": float(inputs.reputation == "known"),
                        "new": float(inputs.reputation == "new")},
     }

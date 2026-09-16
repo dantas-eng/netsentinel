@@ -91,6 +91,12 @@ def create_app(settings: Settings, lab_config=None, database=None, mitigation=No
             response.headers['Cache-Control'] = 'no-store'
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self'; script-src 'self'; "
+            "style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
+            "connect-src 'self'; font-src 'self'; object-src 'none'; "
+            "base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+        )
         return response
 
     @app.get('/health')
@@ -183,6 +189,13 @@ def create_app(settings: Settings, lab_config=None, database=None, mitigation=No
         if after_id < 0 or not 1 <= limit <= 500:
             raise ValueError('Paginação inválida.')
         return jsonify(events=repository.events(after_id, limit))
+
+    @app.get('/api/devices/<mac>/history')
+    def device_history(mac):
+        limit = int(request.args.get('limit', 100))
+        if not 1 <= limit <= 500:
+            raise ValueError('Paginação inválida.')
+        return jsonify(history=repository.risk_history(mac, limit))
 
     @app.get('/api/audit')
     def audits():

@@ -1,4 +1,4 @@
-# Backend e dashboard 0.5.0 — operação e contratos
+# Backend e dashboard 0.7.0 — operação e contratos
 
 REST Flask, Socket.IO/Observer, repositories SQLAlchemy, calibração persistida e
 sessão do operador implementados. O dashboard visual é servido em `/`.
@@ -26,6 +26,8 @@ Na raiz do projeto, com o ambiente configurado:
 python -m netsentinel.api migrate
 python -m netsentinel.api bootstrap
 python -m netsentinel.api serve
+python -m netsentinel.api prune --keep-days DIAS
+python -m netsentinel.api prune --keep-days DIAS --confirm
 ```
 
 Executar bootstrap antes de começar a captura. Importa os três nós legítimos da
@@ -79,8 +81,9 @@ independente do token do agente da Vítima; nunca enviar o token do agente ao br
 | GET /health | Verifica acesso ao schema e informa modo |
 | GET /api/auth/session | Operador atual |
 | GET /api/status | Estado da fonte e instante do último snapshot |
-| GET /api/devices | Reputação, risco atual, baseline em bytes/s e datas |
-| POST /api/devices/{mac}/reputation | `{known: boolean, reason: string}`; confirmação/revogação auditada |
+| GET /api/devices | Reputação, risco atual, baseline em bytes/s e datas. Omite o MAC reservado de auditoria `02:00:00:00:00:00`. |
+| GET /api/devices/{mac}/history?limit=100 | Série `risk_evaluated` persistida (`event_id`, `timestamp`, `score`, `classification`); `1 <= limit <= 500`. |
+| POST /api/devices/{mac}/reputation | `{known: boolean, reason: string}`; confirmação/revogação auditada. Rejeita o MAC reservado de auditoria. |
 | POST /api/devices/{mac}/calibrations | Inicia coleta explícita; retorna 202 e calibration_id |
 | GET /api/devices/{mac}/calibrations | Estado e amostras persistidas |
 | GET /api/topology | Nós persistidos e conexões observadas na última janela |
@@ -118,6 +121,7 @@ Não há handlers de alteração de dados pelo socket.
 Eventos existentes são preservados:
 
 - risk_evaluated: mantém attacker/false_gateway_claim e acrescenta devices, por MAC.
+- threat_unmitigable: ameaça confirmada em MAC que não está pré-aprovado (ADR 0008).
 - mitigation_applied e mitigation_status: preservam evidence do agente.
 - mitigation_error: mantém a informação de tentativa posterior.
 
@@ -128,8 +132,18 @@ assinante não desfaz o evento nem impede os demais.
 
 Ao reconectar, assinar os eventos e consultar `/api/events?after_id=ultimoId`,
 deduplicando por event_id. O histórico tem paginação crescente; continuar pelo
-último ID recebido até esgotar a página. Eventos não têm retenção automática
-nesta versão; dimensionar o disco do laboratório e preservar a evidência da demo.
+último ID recebido até esgotar a página.
+
+A poda da tabela `events` é **manual**, nunca automática. `core.mjs:43` só avança
+o cursor via REST; um push com ID maior não autoriza pular lacuna. Uma poda
+automática poderia apagar linhas acima do cursor de um cliente desconectado, que
+então pulariam essa lacuna no replay — exatamente a falha que o cursor existe
+para impedir. Por isso `python -m netsentinel.api prune --keep-days DIAS` relata
+quantas linhas cairiam fora da janela (`removed=0`) e só apaga com `--confirm`,
+registrando auditoria `events_pruned`. `--keep-days` é obrigatório, sem default.
+A linha de auditoria usa o MAC reservado `02:00:00:00:00:00` (unicast LAA) só
+para satisfazer a FK `Audit.mac`. Esse endereço não aparece em `/api/devices`
+nem na topologia e não pode ser promovido a KNOWN.
 
 ## Cloud, separado do laboratório
 
@@ -158,8 +172,8 @@ python -m ruff check .
 PYTHONPATH=src python tests/run_offline.py
 ```
 
-101 testes Python aprovados; Ruff sem apontamentos. O frontend acrescenta
-9 testes JavaScript (`cd frontend` e `npm test`) e build local de assets. SQLite real cobre persistência após
+148 testes Python aprovados (`tests/run_offline.py` → `Ran 148 tests`); Ruff sem apontamentos nos arquivos da poda. O frontend acrescenta
+14 testes JavaScript (`cd frontend` e `npm test` → `# pass 14`) e build local de assets. SQLite real cobre persistência após
 reabertura, reputação, auditoria, calibração e migrations. O teste Alembic compara
 o schema criado com os modelos; também gera SQL PostgreSQL offline.
 

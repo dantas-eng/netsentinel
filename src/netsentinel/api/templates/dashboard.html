@@ -74,7 +74,7 @@
     <div class="flex items-start justify-between gap-4"><div><span class="eyebrow">DISPOSITIVO</span><h2 id="detail-title" class="mono"></h2></div><button id="close-detail" aria-label="Fechar detalhes">Fechar</button></div>
     <div id="detail-data"></div>
     <section class="detail-section"><h3>Reconhecimento manual</h3><p id="reputation-help" class="muted"></p><form id="reputation-form" class="grid gap-3"><label>Motivo<textarea id="reputation-reason" required maxlength="500" rows="2" placeholder="Como você identificou este dispositivo?"></textarea></label><button id="reputation-submit" class="primary" type="submit">Confirmar dispositivo</button></form></section>
-    <section class="detail-section"><h3>Baseline de volume</h3><p class="muted">Mediana de cinco janelas completas de 8 s, sem sobreposição e sem conflito ARP. O valor permanece congelado até nova calibração.</p><p id="calibration-state"></p><button id="calibrate" type="button">Iniciar calibração</button></section>
+    <section class="detail-section"><h3>Baseline de volume</h3><p class="muted">Mediana de cinco janelas completas de 8 s, sem sobreposição e sem conflito ARP. O valor permanece congelado até nova calibração.</p><p id="calibration-state"></p><button id="calibrate" type="button" aria-describedby="calibrate-reason">Iniciar calibração</button><p id="calibrate-reason" class="muted" role="status" hidden></p></section>
     <p id="detail-message" role="status" aria-live="polite"></p>
   </dialog>
 </body>

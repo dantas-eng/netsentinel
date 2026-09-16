@@ -1,18 +1,19 @@
-import {Api, ApiError, EventFeed, eventNames, graphData, riskStyle, counterInterval} from './core.mjs';
+import {Api, ApiError, EventFeed, eventNames, graphData, riskStyle, counterInterval, sparkline} from './core.mjs';
 
 const $ = id => document.getElementById(id);
 const api = new Api();
 const labels = {risk_evaluated: 'Risco avaliado', mitigation_applied: 'Mitigação aplicada',
   mitigation_status: 'Estado da mitigação', mitigation_error: 'Falha na mitigação',
   reputation_changed: 'Reputação alterada', baseline_calibrated: 'Baseline calibrado',
-  snapshot_updated: 'Captura atualizada', source_error: 'Fonte interrompida'};
+  snapshot_updated: 'Captura atualizada', source_error: 'Fonte interrompida',
+  threat_unmitigable: 'Ameaça sem mitigação autorizada'};
 const reputations = {known: 'Reconhecido', new: 'Novo', unknown: 'Sem informação'};
 const actions = {confirm: 'Dispositivo confirmado', revoke: 'Reconhecimento revogado', bootstrap: 'Inventário importado',
   calibration_started: 'Calibração iniciada', calibration_completed: 'Calibração concluída'};
 let epoch = 0, signedIn = false, socket = null, syncJob = null, dirty = false, refreshTimer;
 let devices = [], status = null, topology = {nodes: [], links: []}, selected = null;
 let evidenceEvents = [], lastMitigationError = 0, snapshot = null, snapshotID = 0;
-let graph, graphNodes, graphEdges, fitted = false, detailRequest = 0, calibration = null;
+let graph, graphNodes, graphEdges, fitted = false, detailRequest = 0, calibration = null, history = null;
 const feed = new EventFeed(acceptEvent);
 const fmt = value => typeof value === 'number' && Number.isFinite(value) ? value.toLocaleString('pt-BR', {maximumFractionDigits: 2}) : '—';
 const when = value => typeof value === 'number' ? new Date(value * 1000).toLocaleString('pt-BR') : '—';
@@ -34,7 +35,7 @@ function endSession(text = '') {
   epoch++; signedIn = false; api.csrf = null;
   clearTimeout(refreshTimer); socket?.disconnect(); socket = null;
   feed.reset(); devices = []; status = null; evidenceEvents = []; lastMitigationError = 0;
-  snapshot = null; snapshotID = 0; selected = null; calibration = null; detailRequest++;
+  snapshot = null; snapshotID = 0; selected = null; calibration = null; history = null; detailRequest++;
   graph?.destroy(); graph = null; fitted = false;
   $('device-dialog').close(); $('workspace').hidden = true; $('login-panel').hidden = false;
   for (const id of ['devices', 'events', 'audit', 'detail-data']) $(id).replaceChildren();
@@ -204,7 +205,7 @@ function renderEvidence() {
   $('interval-state').textContent = `${before && after ? `${when(before.timestamp)} → ${when(after.timestamp)}. ` : ''}${interval.reason}${error ? ' Últimas leituras são históricas; há falha posterior.' : ''}`;
 }
 async function openDetails(mac) {
-  selected = mac; calibration = null; $('reputation-reason').value = ''; message('', 'detail-message');
+  selected = mac; calibration = null; history = null; $('reputation-reason').value = ''; message('', 'detail-message');
   $('detail-title').textContent = mac; $('device-dialog').showModal();
   await loadDetails();
 }
@@ -212,10 +213,79 @@ async function loadDetails() {
   const requestID = ++detailRequest, version = epoch, mac = selected;
   renderDetails(); $('calibrate').disabled = true;
   try {
-    const data = await api.request(`/api/devices/${encodeURIComponent(mac)}/calibrations`);
+    const [data, series] = await Promise.all([
+      api.request(`/api/devices/${encodeURIComponent(mac)}/calibrations`),
+      api.request(`/api/devices/${encodeURIComponent(mac)}/history?limit=200`),
+    ]);
     if (requestID !== detailRequest || epoch !== version || selected !== mac) return;
-    calibration = data.calibrations[0] || null; renderDetails();
+    calibration = data.calibrations[0] || null;
+    history = series.history || [];
+    renderDetails();
   } catch (error) { if (epoch === version && selected === mac) fail(error, 'detail-message'); }
+}
+function renderObserved(d) {
+  const section = node('section', undefined, 'detail-section');
+  section.append(node('h3', 'Evidência observada'));
+  section.append(node('p', 'Não entra na inferência fuzzy.', 'muted'));
+  const observed = snapshot?.devices?.[d.mac] || {};
+  const protocols = Object.entries(observed.protocols || {})
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+    .map(([name, count]) => `${name} ${fmt(count)}`)
+    .join(', ') || '—';
+  const ips = Array.isArray(observed.claimed_ips) ? observed.claimed_ips : [];
+  const total = Number.isFinite(observed.claimed_ips_total) ? observed.claimed_ips_total : ips.length;
+  let ipText = ips.join(', ') || '—';
+  if (total > ips.length) ipText += ` (+${total - ips.length})`;
+  const facts = node('dl', undefined, 'facts');
+  const rows = [['Protocolos', protocols], ['IPs observados', ipText]];
+  const ratio = d.risk?.inputs?.arp_reply_ratio;
+  if (Number.isFinite(ratio)) rows.push(['Proporção de replies ARP', fmt(ratio)]);
+  for (const [label, value] of rows) {
+    const row = node('div'); row.append(node('dt', label), node('dd', value)); facts.append(row);
+  }
+  section.append(facts);
+  return section;
+}
+function renderScoreHistory() {
+  const section = node('section', undefined, 'detail-section');
+  section.append(node('h3', 'Score no tempo'));
+  if (history == null) {
+    section.append(node('p', 'Carregando histórico de score…', 'muted'));
+    return section;
+  }
+  const chart = sparkline(history, 520, 72);
+  if (chart.empty) {
+    section.append(node('p', 'Ainda não há histórico de score para este dispositivo.', 'muted'));
+    return section;
+  }
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('class', 'sparkline');
+  svg.setAttribute('viewBox', `-4 -4 ${chart.width + 8} ${chart.height + 8}`);
+  svg.setAttribute('role', 'img');
+  const latest = history.filter(point => Number.isFinite(point?.score)).at(-1);
+  svg.setAttribute('aria-label', `Score no tempo: ${chart.markers.length} pontos, último ${fmt(latest?.score)}`);
+  for (const score of [35, 65]) {
+    const y = chart.height * (1 - score / 100);
+    const line = document.createElementNS(ns, 'line');
+    line.setAttribute('x1', '0'); line.setAttribute('x2', String(chart.width));
+    line.setAttribute('y1', String(y)); line.setAttribute('y2', String(y));
+    line.setAttribute('class', 'sparkline-threshold');
+    svg.append(line);
+  }
+  const path = document.createElementNS(ns, 'path');
+  path.setAttribute('d', chart.path);
+  path.setAttribute('class', 'sparkline-path');
+  path.setAttribute('pathLength', '1');
+  path.setAttribute('fill', 'none');
+  svg.append(path);
+  const mark = chart.markers.at(-1);
+  const circle = document.createElementNS(ns, 'circle');
+  circle.setAttribute('cx', String(mark.x)); circle.setAttribute('cy', String(mark.y));
+  circle.setAttribute('r', '3.5'); circle.setAttribute('class', 'sparkline-dot');
+  svg.append(circle);
+  section.append(svg);
+  return section;
 }
 function renderDetails() {
   const d = devices.find(d => d.mac === selected); if (!d) return;
@@ -225,13 +295,24 @@ function renderDetails() {
     ['Baseline', d.baseline_bps == null ? 'Indisponível' : `${fmt(d.baseline_bps)} bytes/s`]];
   const dl = node('dl', undefined, 'facts');
   for (const [label, value] of entries) { const row = node('div'); row.append(node('dt', label), node('dd', value)); dl.append(row); }
-  $('detail-data').replaceChildren(dl);
+  $('detail-data').replaceChildren(dl, renderObserved(d), renderScoreHistory());
   $('reputation-help').textContent = d.reputation === 'known' ? 'Revogar retorna este MAC a Novo e cancela a calibração ativa.' : 'Confirme somente após reconhecer este dispositivo. Não há promoção automática por score.';
   $('reputation-submit').textContent = d.reputation === 'known' ? 'Revogar reconhecimento' : 'Confirmar dispositivo';
   const names = {collecting: 'Coletando', completed: 'Concluída', cancelled: 'Cancelada', interrupted: 'Interrompida'};
   $('calibration-state').textContent = calibration ? `${names[calibration.status] || calibration.status} · ${calibration.samples.length}/5 janelas aceitas` : 'Nenhuma calibração registrada.';
   $('calibrate').textContent = d.baseline_bps == null ? 'Iniciar calibração' : 'Recalibrar baseline';
-  $('calibrate').disabled = d.reputation !== 'known' || calibration?.status === 'collecting' || !status?.source_running;
+  const blocked = d.reputation !== 'known'
+    ? 'Confirme o dispositivo como conhecido antes de calibrar.'
+    : calibration?.status === 'collecting'
+      ? 'Calibração em coleta; aguarde as cinco janelas.'
+      : !status?.source_running
+        ? 'A fonte está parada; a calibração precisa de janelas novas.'
+        : '';
+  $('calibrate').disabled = Boolean(blocked);
+  $('calibrate').title = blocked;
+  const reason = $('calibrate-reason');
+  reason.textContent = blocked;
+  reason.hidden = !blocked;
 }
 $('login-form').addEventListener('submit', async event => {
   event.preventDefault(); $('login-button').disabled = true; message('Entrando…', 'login-message');

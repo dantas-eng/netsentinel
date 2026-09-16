@@ -6,6 +6,8 @@ RUN npm ci
 COPY frontend/ ./
 COPY src/netsentinel/api/templates/ /app/src/netsentinel/api/templates/
 COPY src/netsentinel/api/static/ /app/src/netsentinel/api/static/
+# evidence-corpus.test.mjs lê o mesmo JSON que o teste Python (ADR 0006).
+COPY tests/fixtures/evidence_cases.json /app/tests/fixtures/evidence_cases.json
 RUN npm test && npm run build
 
 FROM python:3.12-slim-bookworm AS python-build

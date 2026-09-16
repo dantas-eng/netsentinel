@@ -1,6 +1,6 @@
 # NetSentinel — mapa de conformidade NEXUS
 
-Base de implementação: versão 0.6.0. Este documento registra evidências disponíveis,
+Base de implementação: versão 0.7.0. Este documento registra evidências disponíveis,
 o alcance de cada evidência e o que ainda falta demonstrar. Não é declaração de
 aprovação pela banca nem de conclusão integral dos cinco requisitos.
 
@@ -17,9 +17,11 @@ escrito para Docker/Postgres não comprova que esse teste já tenha sido executa
 URLs de repositório, PR, execução pública de CI e serviço cloud não foram fornecidas
 nesta etapa; não se atribuem evidências públicas inexistentes.
 
-A última verificação local registrada na entrega 0.6.0 foi de **101 testes Python,
-9 testes JavaScript, Ruff e build do frontend aprovados**. Esta revisão é somente
-documental: não executou novamente as suítes, Docker, Postgres ou as VMs.
+A verificação local desta atualização 0.7.0 mediu **148 testes Python**
+(`tests/run_offline.py` → `Ran 148 tests`) e **14 testes JavaScript**
+(`cd frontend && npm test` → `# pass 14`), com Ruff limpo nos arquivos da
+poda. Docker/Postgres/VMs e a checagem visual de CSP/modal na stack em
+execução **não foram refeitos** aqui: a imagem em `:8080` estava desatualizada.
 
 ## Visão geral
 
@@ -42,7 +44,7 @@ menciona versionamento semântico nas práticas do projeto.
 | [LICENSE](../LICENSE) | Licença MIT para o código do NetSentinel. |
 | [README.md](../README.md) | Descrição do projeto, operação, testes, decisões e limites conhecidos. |
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Fluxo de branches/PR, revisão por outro integrante e verificações locais/CI. |
-| [pyproject.toml](../pyproject.toml) | Versão do pacote declarada como 0.6.0; não comprova existência de tag publicada. |
+| [pyproject.toml](../pyproject.toml) | Versão do pacote declarada como 0.7.0; não comprova existência de tag publicada. |
 | [Licenças dos assets](../src/netsentinel/api/static/vendor/licenses/) | Avisos dos componentes de terceiros distribuídos com o dashboard offline. |
 
 **Limite:** licença, arquivo de contribuição e uma entrega ZIP não demonstram
@@ -66,7 +68,7 @@ demonstrada e mitigada no ambiente real das quatro VMs.
 | [capture/service.py](../src/netsentinel/capture/service.py), [scapy_source.py](../src/netsentinel/capture/scapy_source.py) e [normalizer.py](../src/netsentinel/capture/normalizer.py) | Captura Scapy, modo promíscuo, agregação e separação entre origem Ethernet observada e alegação ARP. |
 | [test_capture.py](../tests/unit/test_capture.py), `CaptureTests.test_preserves_claim_and_actual_source` e `test_promiscuous_persistent_socket` | Preservação de autoria observada e configuração do socket; não comprovam visibilidade unicast no VirtualBox. |
 | [attack.py](../src/netsentinel/security/attack.py), [config.py](../src/netsentinel/security/config.py) e [system.py](../src/netsentinel/security/system.py) | Ataque limitado ao alvo configurado, sem encaminhamento, e verificações locais de isolamento. |
-| [demo.py](../src/netsentinel/security/demo.py), `SecurityDemo.consume` | Exige autoria/alegação falsa e score >=65 em duas avaliações consecutivas do mesmo MAC, com reset quando não qualifica. |
+| [demo.py](../src/netsentinel/security/demo.py), `SecurityDemo.consume` | Detecta qualquer MAC com score >=65 e falsificação de um IP em `trusted_bindings()`; a mitigação continua exclusiva do MAC pré-aprovado (ADR 0008). Sequência ADR 0007 por MAC. |
 | [strategy.py](../src/netsentinel/security/strategy.py) e [agente da Vítima](../src/netsentinel/security/agent/) | Comunicação pela Internal Network; aplicação idempotente de ARP estático e firewall netdev/ingress, validação de MAC e ações fixas. |
 | [evidence.py](../src/netsentinel/security/evidence.py), `verify_interval` | Verifica deltas de contadores, estado ARP e bloqueio; não declara ping verificado. |
 | [test_security_pipeline.py](../tests/integration/test_security_pipeline.py), `SecurityPipelineAcceptance.test_new_attacker_without_baseline_causes_verified_agent_action` | PCAP → captura → fuzzy → Strategy → API do agente, com kernel/HTTP de transporte substituídos nos testes. |
@@ -74,9 +76,15 @@ demonstrada e mitigada no ambiente real das quatro VMs.
 | [test_security_consecutive.py](../tests/unit/test_security_consecutive.py), `ConsecutiveEvaluationsTests.test_two_consecutive_qualifications_apply_once_at_threshold` e `test_nonqualifying_evaluation_resets_then_requires_two_fresh_ones` | Disparo na segunda avaliação e reinício da sequência. |
 
 Decisões relacionadas: [ADR 0001](decisions/0001-arp-sem-encaminhamento.md),
-[ADR 0003](decisions/0003-agente-e-acesso-hostonly.md) e
-[ADR 0007](decisions/0007-duas-avaliacoes-antes-da-mitigacao.md).
+[ADR 0003](decisions/0003-agente-e-acesso-hostonly.md),
+[ADR 0007](decisions/0007-duas-avaliacoes-antes-da-mitigacao.md) e
+[ADR 0008](decisions/0008-deteccao-ampla-mitigacao-restrita.md).
 Roteiro operacional: [lab/README.md](../lab/README.md).
+
+A detecção 0.7.0 é mais ampla (segundo atacante sintético, falsificação de
+qualquer papel em `trusted_bindings()`, evento `threat_unmitigable`). **O
+status deste requisito não muda:** a vulnerabilidade ainda exige as quatro
+VMs, ping caindo/voltando e nftables no kernel.
 
 **Para fechar:** reunir captura que confirme visibilidade unicast no Sensor,
 registros do ataque sem forwarding, queda/recuperação do ping Vítima → Gateway,
@@ -98,12 +106,13 @@ do roteiro; não é necessário introduzir algoritmo genético para justificar e
 
 | Evidência concreta | O que demonstra |
 | --- | --- |
-| [analysis/features.py](../src/netsentinel/analysis/features.py) | Extrai conflito ARP, frequência, reputação e desvio de volume por dispositivo. |
+| [analysis/features.py](../src/netsentinel/analysis/features.py) | Extrai conflito ARP, frequência, reputação, desvio de volume e `arp_reply_ratio` por dispositivo. |
 | [fuzzy/membership.py](../src/netsentinel/analysis/fuzzy/membership.py), [rules.py](../src/netsentinel/analysis/fuzzy/rules.py) e [engine.py](../src/netsentinel/analysis/fuzzy/engine.py) | Cinco regras Mamdani, operações min/max e defuzzificação por centroide com scikit-fuzzy. Score 0–100, limiares 35/65. |
 | [analysis/contracts.py](../src/netsentinel/analysis/contracts.py) e [services/pipeline.py](../src/netsentinel/services/pipeline.py) | Providers injetados de reputação/baseline e uso da estratégia no fluxo efetivo do backend. |
 | [test_fuzzy.py](../tests/unit/test_fuzzy.py), `RuleTests.test_each_rule_in_isolation`, `InferenceTests.test_r2_survives_missing_baseline` e `test_no_evidence_abstains_after_rules` | Regras exercitadas, classificação possível sem baseline e abstenção somente quando nenhuma regra dispara. |
 | [test_fuzzy_demo.py](../tests/integration/test_fuzzy_demo.py), `DemoAcceptance.test_new_attacker_without_baseline_with_conflict` e `test_new_attacker_without_baseline_without_conflict` | PCAP sintético → captura → classificação do Atacante NEW sem baseline como suspeito, inclusive sem conflito observado. |
 | [test_repository.py](../tests/unit/test_repository.py), `RepositoryTests.test_baseline_converts_each_window_bytes_to_bytes_per_second` | Cinco janelas com 80/160/240/320/400 bytes resultam em mediana de 30 bytes/s, respeitando a unidade do provider. |
+| [docs/validation/fuzzy-metrics.md](validation/fuzzy-metrics.md), gerado por [tools/fuzzy_metrics.py](../tools/fuzzy_metrics.py) | Consistência interna em 15 cenários sintéticos escritos pela equipe; `RATIO_HIGH_FLOOR=0.5` é o único piso com 15/15. **Não é acurácia nem taxa de falso positivo em rede real.** |
 
 Decisões relacionadas: [ADR 0002](decisions/0002-reputacao-e-janela-demo.md),
 [ADR 0004](decisions/0004-promocao-manual-de-reputacao.md) e
@@ -125,8 +134,16 @@ visão textual/diagrama das camadas, responsabilidades e ordem real de execuçã
 | Padrão | Implementação e justificativa rastreável | Evidência de integração |
 | --- | --- | --- |
 | Observer | [events/bus.py](../src/netsentinel/events/bus.py), `EventBus`, publica para assinantes; [api/app.py](../src/netsentinel/api/app.py), `notify`, adapta eventos a Socket.IO. Separa produção de eventos da entrega ao dashboard. | [test_backend.py](../tests/integration/test_backend.py), `BackendTests.test_websocket_requires_session_and_csrf_then_receives_persisted_events`. |
-| Strategy | [analysis/contracts.py](../src/netsentinel/analysis/contracts.py), `ClassificationStrategy`, e [security/strategy.py](../src/netsentinel/security/strategy.py), `MitigationStrategy`; implementações fuzzy, agente real e [mitigação sintética](../src/netsentinel/services/synthetic.py). Isola algoritmo e mecanismo de defesa de seus consumidores. | `BackendTests.test_cloud_uses_secure_cookie_and_never_constructs_real_agent` e `test_pcap_to_repository_strategy_agent_and_websocket` no mesmo arquivo de testes. |
+| Strategy | [analysis/contracts.py](../src/netsentinel/analysis/contracts.py), `ClassificationStrategy`, e [security/strategy.py](../src/netsentinel/security/strategy.py), `MitigationStrategy`; implementações fuzzy, agente real e [mitigação sintética](../src/netsentinel/services/synthetic.py). Isola algoritmo e mecanismo de defesa de seus consumidores. Identidade de mitigação formalizada em [SecurityIdentity](../src/netsentinel/security/identity.py) (`attacker_mac` + `trusted_bindings()`). | `BackendTests.test_cloud_uses_secure_cookie_and_never_constructs_real_agent` e `test_pcap_to_repository_strategy_agent_and_websocket` no mesmo arquivo de testes. |
 | Repository | [repositories/store.py](../src/netsentinel/repositories/store.py), `Repository`, concentra persistência e fornece reputação/baseline ao fuzzy. Isola análise das consultas e das regras de armazenamento. | [test_repository.py](../tests/unit/test_repository.py), `RepositoryTests.test_new_stays_new_after_persisting_and_restart` e `test_confirmation_persists_and_revocation_is_not_overwritten_by_bootstrap`. |
+
+A dívida da [ADR 0006](decisions/0006-duplicacao-da-verificacao-de-evidencia.md)
+não foi “resolvida” criando um endpoint: a emenda 0.7.0 **rejeita** o endpoint
+autenticado e impede divergência com o corpus
+[evidence_cases.json](../tests/fixtures/evidence_cases.json), lido por
+`test_evidence_corpus.py` e `frontend/tests/evidence-corpus.test.mjs`.
+`verify_interval` e `counterInterval` passam a expor `reason_code` no mesmo
+vocabulário. Duplicação permanece deliberada.
 
 **Alcance:** os padrões estão vinculados a classes, contratos e chamadas existentes.
 A documentação não promete arquitetura distribuída nem múltiplos workers; fonte e
