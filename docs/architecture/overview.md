@@ -157,6 +157,26 @@ Compatibilidade com Postgres em execução ainda precisa ser demonstrada. Reposi
 isola detalhes SQL dos consumidores, mas não torna gratuita uma mudança de schema
 ou de tecnologia de banco.
 
+## Módulos de segurança
+
+| Módulo | Responsabilidade |
+| --- | --- |
+| [attack.py](../../src/netsentinel/security/attack.py) | Envio ARP limitado ao Atacante, Vítima e Gateway configurados, com forwarding obrigatoriamente desativado, limite de taxa e duração. |
+| [agent/](../../src/netsentinel/security/agent/) | Flask com ações fixas autenticadas, regras nftables netdev/ingress, associação ARP estática, journal e restauração local conservadora. |
+| [strategy.py](../../src/netsentinel/security/strategy.py) | Cliente com IP de origem da Internal Network do Sensor, timeout, sem proxies ou redirects, e repetição idempotente no agente. |
+| [demo.py](../../src/netsentinel/security/demo.py) | Captura com janela de 8 s, classificação fuzzy e chamada da Strategy. |
+| [evidence.py](../../src/netsentinel/security/evidence.py) | Deltas de tráfego visto, descartado e pós-filtro no mesmo `run_id`, com ARP correto. Silêncio ou recuperação de ping não bastam como prova. |
+| [netsentinel-agent.service](../../deploy/netsentinel-agent.service) | Usuário dedicado e CAP_NET_ADMIN para o agente. |
+
+A aceitação integrada percorre PCAP sintético, Scapy, captura de 8 s, fuzzy,
+Strategy e Flask. Só o kernel e o transporte HTTP são substituídos; não houve
+envio real de ataque, filtro nft aplicado nem ping entre VMs nesse ensaio. No
+teste de transmissão limitada, o sender é um mock e o relógio é simulado.
+
+A sequência do laboratório prepara o agente antes do ataque e inicia o executor
+depois que a perda de ping fica visível, para que uma resposta automática rápida
+não esconda o efeito do envenenamento.
+
 ## Fronteiras de execução e limites conhecidos
 
 No laboratório, Sensor acumula backend/dashboard e captura. Sua Internal Network
