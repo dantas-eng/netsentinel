@@ -43,19 +43,19 @@ menciona versionamento semântico nas práticas do projeto.
 | Evidência disponível | O que demonstra |
 | --- | --- |
 | [LICENSE](../LICENSE) | Licença MIT para o código do NetSentinel. |
-| [README.md](../README.md) | Descrição do projeto, operação, testes, decisões e limites conhecidos. |
+| [README.md](../README.md) | Descrição do projeto, instalação, operação, testes e índice da documentação. |
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Fluxo de branches/PR, revisão por outro integrante e verificações locais/CI. |
 | [pyproject.toml](../pyproject.toml) | Versão do pacote declarada como 0.7.0. |
 | [Licenças dos assets](../src/netsentinel/api/static/vendor/licenses/) | Avisos dos componentes de terceiros distribuídos com o dashboard offline. |
 | https://github.com/dantas-eng/netsentinel | Repositório público do projeto (conta `dantas-eng`). |
-| Tag `v0.7.0` → commit `88ca038` | Release anotada da versão avaliada (merge `feat/melhorias-0.7.0` em `main`). |
-| https://github.com/dantas-eng/netsentinel/actions/runs/35162443539 | CI verde no push inicial: Ruff, 148 testes Python, 14 testes JS, container/Postgres. |
+| Tag `v0.7.0` → commit `ce2e798` | Release anotada da versão avaliada (merge `feat/melhorias-0.7.0` em `main`). |
+| https://github.com/dantas-eng/netsentinel/actions/runs/35164037168 | CI verde em `main`: Ruff, 148 testes Python, 14 testes JS, container/Postgres. |
 | Proteção de `main` | PR obrigatório, 1 review, checks `Lint e testes offline`, `Frontend offline` e `Container e Postgres sintéticos`. |
 
 **Limite:** publicação e CI não substituem review entre integrantes. Não há nesta
 documentação PR fictício nem aprovação inventada.
 
-| https://github.com/dantas-eng/netsentinel/pull/1 | PR aberto (`docs/publicacao-github` → `main`); CI verde em https://github.com/dantas-eng/netsentinel/actions/runs/35162610210. **Aguardando review e merge por integrante distinto do autor.** |
+| https://github.com/dantas-eng/netsentinel/pull/1 | PR aberto (`docs/publicacao-github` → `main`); CI verde em https://github.com/dantas-eng/netsentinel/actions/runs/35164039546. **Aguardando review e merge por integrante distinto do autor.** |
 
 **Para fechar:** aprovação de review e merge do PR #1 (ou equivalente) por integrante
 distinto do autor, com comentários ou aprovação verificável. Conservar o histórico.
@@ -162,20 +162,20 @@ O deploy e sua configuração final ainda precisam ser realizados e comprovados.
 
 | Evidência concreta | Alcance e limite |
 | --- | --- |
-| [Dockerfile](../Dockerfile) e [frontend/build.mjs](../frontend/build.mjs) | Build multi-stage de frontend e Python, com assets locais e runtime Linux. Imagem ainda não executada neste ambiente. |
+| [Dockerfile](../Dockerfile) e [frontend/build.mjs](../frontend/build.mjs) | Build multi-stage de frontend e Python, com assets locais e runtime Linux. A imagem é construída e executada pelo job `Container e Postgres sintéticos` do CI. |
 | [docker-compose.yml](../docker-compose.yml) | Serviço sintético local e Postgres persistente. Compose local não equivale a cloud. |
 | [deploy/start-container.sh](../deploy/start-container.sh), [api/wsgi.py](../src/netsentinel/api/wsgi.py) e [settings.py](../src/netsentinel/api/settings.py) | Migração antes do servidor, Gunicorn com um worker, PORT configurável, fonte sintética e exigência de Postgres no modo cloud. |
 | [migrations/](../migrations/) e [repositories/migrate.py](../src/netsentinel/repositories/migrate.py) | Schema versionado com Alembic. |
 | [test_repository.py](../tests/unit/test_repository.py), `RepositoryTests.test_migrations_match_models_and_repeat_without_changes` e `test_initial_migration_compiles_for_postgres_without_a_live_database` | Migração exercitada em SQLite e compilação SQL para Postgres; não comprovam execução em Postgres real. |
-| [.github/workflows/ci.yml](../.github/workflows/ci.yml) | Gatilho pull_request e push em main; execuções verdes em https://github.com/dantas-eng/netsentinel/actions/runs/35162443539 (push) e https://github.com/dantas-eng/netsentinel/actions/runs/35162610210 (PR #1). |
-| [tests/container_smoke.py](../tests/container_smoke.py) | Teste HTTP preparado para o Compose, com sessão/CSRF e dados sintéticos. Não executado nesta entrega; não testa política de cookies do browser. |
+| [.github/workflows/ci.yml](../.github/workflows/ci.yml) | Gatilho pull_request e push em main; execuções verdes em https://github.com/dantas-eng/netsentinel/actions/runs/35164037168 (push em main) e https://github.com/dantas-eng/netsentinel/actions/runs/35164039546 (PR #1). |
+| [tests/container_smoke.py](../tests/container_smoke.py) | Teste HTTP sobre o Compose, com sessão/CSRF e dados sintéticos. Executado no CI junto da verificação da revisão Alembic em Postgres real; não testa política de cookies do browser. |
 
 Roteiros: [docs/docker.md](docker.md) e [docs/backend.md](backend.md).
 
-**Para fechar:** executar e registrar build/Compose e migração em Postgres real;
-concluir deploy em GCP Cloud Run com Postgres gerenciado e HTTPS; registrar URL e
-revisão/commit implantados; publicar o repositório e uma execução de Actions ligada
-a PR com lint/testes; configurar e demonstrar o fluxo de publicação/CD. Registrar
+**Para fechar:** concluir deploy em GCP Cloud Run com Postgres gerenciado e HTTPS;
+registrar URL e revisão/commit implantados; configurar e demonstrar o fluxo de
+publicação/CD. Repositório público, CI ligada a PR e build/Compose com migração em
+Postgres real já estão registrados acima. Registrar
 as evidências sem credenciais. O ambiente cloud usa dados sintéticos e não se conecta
 à rede isolada do ataque, conforme a separação já aprovada.
 
