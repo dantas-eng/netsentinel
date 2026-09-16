@@ -14,8 +14,9 @@ Os PDFs oficiais prevalecem sobre o guia interno e esta interpretação operacio
 Um arquivo comprova implementação ou intenção documentada; um teste offline
 comprova somente o comportamento exercitado no seu ambiente. Código de teste
 escrito para Docker/Postgres não comprova que esse teste já tenha sido executado.
-URLs de repositório, PR, execução pública de CI e serviço cloud não foram fornecidas
-nesta etapa; não se atribuem evidências públicas inexistentes.
+Repositório público, tag de release e execução de CI no push inicial estão
+registrados abaixo. URL de PR com autor e revisor distintos e serviço cloud
+implantado continuam pendentes; não se atribuem evidências inexistentes.
 
 A verificação local desta atualização 0.7.0 mediu **148 testes Python**
 (`tests/run_offline.py` → `Ran 148 tests`) e **14 testes JavaScript**
@@ -27,11 +28,11 @@ execução **não foram refeitos** aqui: a imagem em `:8080` estava desatualizad
 
 | # | Requisito NEXUS | Situação documentada |
 | --- | --- | --- |
-| 1 | Open Source Contribution & Collaboration | Base de contribuição pronta; publicação e ciclo real de PR/code review pendentes de comprovação. |
+| 1 | Open Source Contribution & Collaboration | Repositório público, tag v0.7.0, CI e proteção de branch ativos; ciclo real de PR/code review entre integrantes ainda pendente. |
 | 2 | Telecommunications & Network Security | **Código pronto, validação pendente** — ensaio completo nas quatro VMs. |
 | 3 | Computational Intelligence & Algorithm Optimization | Implementado e verificado offline; parâmetros experimentais ainda sujeitos à validação nas VMs. |
 | 4 | Software Architecture & Design Patterns | Arquitetura documentada, com Observer, Strategy e Repository aplicados e justificados. |
-| 5 | Cloud Computing for Software Development | **Código pronto, validação pendente** — deploy em nuvem e comprovação do pipeline público. |
+| 5 | Cloud Computing for Software Development | CI público comprovado no GitHub Actions; deploy em nuvem e execução ligada a PR ainda pendentes. |
 
 ## 1. Open Source Contribution & Collaboration
 
@@ -44,18 +45,19 @@ menciona versionamento semântico nas práticas do projeto.
 | [LICENSE](../LICENSE) | Licença MIT para o código do NetSentinel. |
 | [README.md](../README.md) | Descrição do projeto, operação, testes, decisões e limites conhecidos. |
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Fluxo de branches/PR, revisão por outro integrante e verificações locais/CI. |
-| [pyproject.toml](../pyproject.toml) | Versão do pacote declarada como 0.7.0; não comprova existência de tag publicada. |
+| [pyproject.toml](../pyproject.toml) | Versão do pacote declarada como 0.7.0. |
 | [Licenças dos assets](../src/netsentinel/api/static/vendor/licenses/) | Avisos dos componentes de terceiros distribuídos com o dashboard offline. |
+| https://github.com/dantas-eng/netsentinel | Repositório público do projeto (conta `dantas-eng`). |
+| Tag `v0.7.0` → commit `88ca038` | Release anotada da versão avaliada (merge `feat/melhorias-0.7.0` em `main`). |
+| https://github.com/dantas-eng/netsentinel/actions/runs/35162443539 | CI verde no push inicial: Ruff, 148 testes Python, 14 testes JS, container/Postgres. |
+| Proteção de `main` | PR obrigatório, 1 review, checks `Lint e testes offline`, `Frontend offline` e `Container e Postgres sintéticos`. |
 
-**Limite:** licença, arquivo de contribuição e uma entrega ZIP não demonstram
-colaboração pública real. Testes gerados ou executados também não substituem review
-entre integrantes. Não há nesta documentação PR fictício, aprovação inventada ou
-URL de repositório presumida.
+**Limite:** publicação e CI não substituem review entre integrantes. Não há nesta
+documentação PR fictício nem aprovação inventada.
 
-**Para fechar:** registrar URL pública do repositório, tag/commit da versão avaliada
-e URL de pelo menos um PR com autor e revisor distintos do grupo, comentários ou
-aprovação de review e desfecho verificável. Conservar o histórico. Configurar as
-proteções descritas em CONTRIBUTING não equivale a já tê-las ativas.
+**Para fechar:** registrar URL de pelo menos um PR com autor e revisor distintos do
+grupo, comentários ou aprovação de review e desfecho verificável. Conservar o
+histórico.
 
 ## 2. Telecommunications & Network Security
 
@@ -164,7 +166,7 @@ O deploy e sua configuração final ainda precisam ser realizados e comprovados.
 | [deploy/start-container.sh](../deploy/start-container.sh), [api/wsgi.py](../src/netsentinel/api/wsgi.py) e [settings.py](../src/netsentinel/api/settings.py) | Migração antes do servidor, Gunicorn com um worker, PORT configurável, fonte sintética e exigência de Postgres no modo cloud. |
 | [migrations/](../migrations/) e [repositories/migrate.py](../src/netsentinel/repositories/migrate.py) | Schema versionado com Alembic. |
 | [test_repository.py](../tests/unit/test_repository.py), `RepositoryTests.test_migrations_match_models_and_repeat_without_changes` e `test_initial_migration_compiles_for_postgres_without_a_live_database` | Migração exercitada em SQLite e compilação SQL para Postgres; não comprovam execução em Postgres real. |
-| [.github/workflows/ci.yml](../.github/workflows/ci.yml) | Gatilho pull_request com Ruff/testes Python, testes/build JS e job de container/Postgres; arquivo escrito, execução pública ainda não comprovada. |
+| [.github/workflows/ci.yml](../.github/workflows/ci.yml) | Gatilho pull_request e push em main; execução pública verde em https://github.com/dantas-eng/netsentinel/actions/runs/35162443539 (push inicial). Execução ligada a PR ainda pendente. |
 | [tests/container_smoke.py](../tests/container_smoke.py) | Teste HTTP preparado para o Compose, com sessão/CSRF e dados sintéticos. Não executado nesta entrega; não testa política de cookies do browser. |
 
 Roteiros: [docs/docker.md](docker.md) e [docs/backend.md](backend.md).
