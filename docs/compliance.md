@@ -55,9 +55,10 @@ menciona versionamento semântico nas práticas do projeto.
 **Limite:** publicação e CI não substituem review entre integrantes. Não há nesta
 documentação PR fictício nem aprovação inventada.
 
-**Para fechar:** registrar URL de pelo menos um PR com autor e revisor distintos do
-grupo, comentários ou aprovação de review e desfecho verificável. Conservar o
-histórico.
+| https://github.com/dantas-eng/netsentinel/pull/1 | PR aberto (`docs/publicacao-github` → `main`); CI verde em https://github.com/dantas-eng/netsentinel/actions/runs/35162610210. **Aguardando review e merge por integrante distinto do autor.** |
+
+**Para fechar:** aprovação de review e merge do PR #1 (ou equivalente) por integrante
+distinto do autor, com comentários ou aprovação verificável. Conservar o histórico.
 
 ## 2. Telecommunications & Network Security
 
@@ -166,7 +167,7 @@ O deploy e sua configuração final ainda precisam ser realizados e comprovados.
 | [deploy/start-container.sh](../deploy/start-container.sh), [api/wsgi.py](../src/netsentinel/api/wsgi.py) e [settings.py](../src/netsentinel/api/settings.py) | Migração antes do servidor, Gunicorn com um worker, PORT configurável, fonte sintética e exigência de Postgres no modo cloud. |
 | [migrations/](../migrations/) e [repositories/migrate.py](../src/netsentinel/repositories/migrate.py) | Schema versionado com Alembic. |
 | [test_repository.py](../tests/unit/test_repository.py), `RepositoryTests.test_migrations_match_models_and_repeat_without_changes` e `test_initial_migration_compiles_for_postgres_without_a_live_database` | Migração exercitada em SQLite e compilação SQL para Postgres; não comprovam execução em Postgres real. |
-| [.github/workflows/ci.yml](../.github/workflows/ci.yml) | Gatilho pull_request e push em main; execução pública verde em https://github.com/dantas-eng/netsentinel/actions/runs/35162443539 (push inicial). Execução ligada a PR ainda pendente. |
+| [.github/workflows/ci.yml](../.github/workflows/ci.yml) | Gatilho pull_request e push em main; execuções verdes em https://github.com/dantas-eng/netsentinel/actions/runs/35162443539 (push) e https://github.com/dantas-eng/netsentinel/actions/runs/35162610210 (PR #1). |
 | [tests/container_smoke.py](../tests/container_smoke.py) | Teste HTTP preparado para o Compose, com sessão/CSRF e dados sintéticos. Não executado nesta entrega; não testa política de cookies do browser. |
 
 Roteiros: [docs/docker.md](docker.md) e [docs/backend.md](backend.md).
