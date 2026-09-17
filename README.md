@@ -1,103 +1,70 @@
 # NetSentinel
 
-NetSentinel observa o tráfego de uma rede local, calcula o risco de cada
-dispositivo com lógica fuzzy e aciona a defesa contra ARP spoofing no host
-atacado. Projeto integrador de Engenharia da Computação para a ExpoTech 2026.2.
+[![CI](https://github.com/dantas-eng/netsentinel/actions/workflows/ci.yml/badge.svg)](https://github.com/dantas-eng/netsentinel/actions/workflows/ci.yml)
+[![versão](https://img.shields.io/badge/versão-0.7.0-informational)](CHANGELOG.md)
+[![licença](https://img.shields.io/badge/licença-MIT-blue.svg)](LICENSE)
 
-## Como funciona
+Observa uma rede local isolada, pontua o risco de cada dispositivo e aplica
+defesa contra ARP spoofing no host atacado. Projeto integrador de Engenharia da
+Computação, ExpoTech 2026.2, categoria NEXUS.
 
-O sensor captura tráfego Ethernet e ARP com Scapy e publica um snapshot por
-segundo. Cada snapshot passa pelo motor fuzzy Mamdani, que combina conflito de
-IP, frequência de ARP, reputação, desvio de volume e razão de replies em um score
-de 0 a 100. Acima de 65, com falsificação de um IP do inventário confiável, a
-ameaça é confirmada. Para o atacante autorizado no laboratório, um agente na
-máquina vítima aplica ARP estático e regra nftables, e o sistema só considera a
-defesa efetiva depois de conferir os contadores antes e depois do filtro.
+## O problema
 
-Camadas, padrões de projeto e ordem de execução estão em
-[docs/architecture/overview.md](docs/architecture/overview.md).
+Numa LAN, o ARP associa IP a MAC sem autenticação. Um atacante pode anunciar o
+IP do gateway com o próprio MAC; o tráfego da vítima passa a ir para ele. Este
+projeto trata desse recorte num laboratório de quatro VMs, sem uplink e sem uso
+em rede de terceiros.
 
-## Requisitos
+## O que o sistema faz
 
-Python 3.11 ou superior, em Linux. As dependências estão em `pyproject.toml`.
-Node é necessário só para editar e recompilar o frontend, não para usar o
-sistema.
+1. O sensor observa Ethernet e ARP e fecha uma janela de tráfego a cada segundo.
+2. O motor fuzzy Mamdani combina conflito de IP, frequência de ARP, reputação,
+   desvio de volume e razão de replies num score de 0 a 100. A partir de 65 o
+   dispositivo é classificado como suspeito.
+3. A ameaça só se confirma com score alto **e** falsificação de um IP do
+   inventário confiável (gateway, vítima, sensor ou atacante).
+4. Só o MAC autorizado no laboratório é mitigado: ARP estático e regra nftables
+   na máquina vítima. Qualquer outro MAC confirmado gera o evento
+   `threat_unmitigable`.
+5. A defesa só conta depois da conferência dos contadores antes e depois do
+   filtro. Silêncio ou volta de ping, sozinhos, não bastam.
 
-## Instalação
+## Como ler este repositório
+
+A banca não precisa abrir o código para localizar cada decisão.
+
+| Pergunta | Onde está |
+| --- | --- |
+| Camadas, padrões e ordem de execução | [docs/architecture/overview.md](docs/architecture/overview.md) |
+| Regras fuzzy, limiares e fixtures | [docs/fuzzy.md](docs/fuzzy.md) |
+| Contrato da captura e da janela | [docs/capture.md](docs/capture.md) |
+| Laboratório das quatro VMs | [lab/README.md](lab/README.md) |
+| O que já está comprovado e o que falta | [docs/compliance.md](docs/compliance.md) |
+| Decisões (ARP sem forwarding, reputação, evidência) | [docs/decisions/](docs/decisions/) |
+| Backend, dashboard e Docker | [docs/backend.md](docs/backend.md) · [docs/dashboard.md](docs/dashboard.md) · [docs/docker.md](docs/docker.md) |
+| Histórico de versões | [CHANGELOG.md](CHANGELOG.md) |
+
+## Recorte desta entrega
+
+Já implementados e cobertos por teste offline: captura, motor fuzzy, backend,
+dashboard, agente de mitigação, ambiente Docker e CI público. O ensaio completo
+nas quatro VMs (ping caindo e voltando, nftables no kernel) e o deploy em nuvem
+ainda não foram feitos. O mapa de evidências está em
+[docs/compliance.md](docs/compliance.md).
+
+## Reproduzir
+
+Python 3.11 ou superior, em Linux.
 
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -e .
-```
-
-Se as VMs forem isoladas depois, instale as dependências antes ou transfira os
-wheels.
-
-## Uso
-
-### Captura no sensor
-
-```bash
-sudo .venv/bin/python -m netsentinel.capture \
-  --interface INTERFACE_INTERNA_DO_SENSOR \
-  --window-seconds SEGUNDOS \
-  --max-observations LIMITE \
-  --isolated-lab
-```
-
-A saída é JSON Lines, uma linha por snapshot. O contrato dos campos está em
-[docs/capture.md](docs/capture.md), e a montagem do laboratório em
-[lab/README.md](lab/README.md).
-
-### Backend e dashboard
-
-```bash
-.venv/bin/python -m netsentinel.api serve
-```
-
-Abra `http://<IP-Host-only-do-Sensor>:<PORT>/` no navegador. O dashboard mostra
-topologia, dispositivos e risco, eventos, auditoria e as evidências do agente.
-Detalhes do contrato REST e Socket.IO em [docs/backend.md](docs/backend.md); o
-escopo da interface em [docs/dashboard.md](docs/dashboard.md).
-
-### Docker
-
-O Compose sobe a aplicação com dados sintéticos e Postgres local. Roteiro em
-[docs/docker.md](docs/docker.md).
-
-## Testes
-
-```bash
 PYTHONPATH=src .venv/bin/python tests/run_offline.py
-cd frontend && npm ci && npm test
 ```
 
-São 148 testes Python e 14 JavaScript, em Python 3.12 com Scapy 2.7.0 e
-scikit-fuzzy 0.5.0. O runner offline evita a descoberta de interfaces e rotas do
-host, mas mantém o Scapy real para construir, dissecar e ler PCAP. O socket é
-mockado nos testes de ciclo de vida e nenhum pacote é transmitido.
-
-O CI roda lint e as duas suítes a cada pull request e a cada push em `main`.
-
-## Documentação
-
-- [Arquitetura e padrões](docs/architecture/overview.md)
-- [Captura e contrato de saída](docs/capture.md)
-- [Motor fuzzy](docs/fuzzy.md)
-- [Backend](docs/backend.md) · [Dashboard](docs/dashboard.md) · [Docker](docs/docker.md)
-- [Laboratório com as quatro VMs](lab/README.md)
-- [Decisões de arquitetura](docs/decisions/)
-- [Changelog](CHANGELOG.md)
-
-## Estado do projeto
-
-Captura, motor fuzzy, backend, dashboard, agente de mitigação e ambiente Docker
-estão implementados e cobertos por testes offline. O ensaio completo nas quatro
-VMs, com ping caindo e voltando e nftables no kernel, ainda não foi feito, e o
-deploy em nuvem continua pendente. O mapa detalhado do que está comprovado e do
-que falta está em [docs/compliance.md](docs/compliance.md).
+Resultado esperado: `Ran 148 tests` e `OK`. No frontend, `cd frontend && npm ci && npm test` deve encerrar com `# pass 14`. O Compose com dados sintéticos está em [docs/docker.md](docs/docker.md). A captura no sensor e a montagem das VMs estão em [lab/README.md](lab/README.md).
 
 ## Licença
 
-MIT, veja [LICENSE](LICENSE). Para contribuir, leia
+MIT. Ver [LICENSE](LICENSE). Fluxo de contribuição em
 [CONTRIBUTING.md](CONTRIBUTING.md).
