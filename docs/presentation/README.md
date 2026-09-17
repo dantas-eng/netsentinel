@@ -7,8 +7,8 @@ Mapeamento dos blocos **Para fechar:** de [docs/compliance.md](../compliance.md)
 
 | Requisito | O que depositar aqui | Ainda não existe |
 | --- | --- | --- |
-| 1 — Open source | URL do repositório, tag/commit avaliado, URL do PR com autor e revisor distintos | Remote e ciclo de PR |
+| 1 — Open source | URL do repositório, tag/commit avaliado, URL do PR com autor e revisor distintos | https://github.com/dantas-eng/netsentinel · tag `v0.7.0` (`ce2e798`) · PR https://github.com/dantas-eng/netsentinel/pull/1 (CI https://github.com/dantas-eng/netsentinel/actions/runs/35164039546) · **review/merge por integrante pendente** |
 | 2 — Telecom e segurança | Screenshots de ping caindo/voltando, dashboard Host-only, nftables na Vítima | Ensaio nas quatro VMs |
-| 5 — Cloud | Screenshot do serviço HTTPS e da Actions ligada a PR | Deploy e CI pública |
+| 5 — Cloud | Screenshot do serviço HTTPS e da Actions ligada a PR | Actions ligada ao PR #1 verde (link acima) · **deploy em nuvem pendente** |
 
 Não colocar senha, token, `.env` ou hash de credencial.
