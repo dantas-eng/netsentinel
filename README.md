@@ -31,7 +31,7 @@ em rede de terceiros.
 
 ## Como ler este repositório
 
-A banca não precisa abrir o código para localizar cada decisão.
+A tabela abaixo relaciona tópicos do projeto aos arquivos onde estão documentados.
 
 | Pergunta | Onde está |
 | --- | --- |
