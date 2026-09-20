@@ -1,0 +1,3 @@
+# Dependências opcionais: não alteram o runtime do MVP.
+deap==1.4.4
+matplotlib>=3.8,<4

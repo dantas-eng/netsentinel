@@ -1,0 +1,27 @@
+
+> netsentinel-dashboard@0.7.0 test
+> node --test tests/*.test.mjs
+
+✔ eventNames registers threat_unmitigable so the dashboard can display it (3.314649ms)
+✔ login obtains public CSRF first, preserves cookies and rotates token before mutations (2.981154ms)
+✔ CSRF failure prevents credentials from being sent (1.536174ms)
+✔ WebSocket future ID never skips missed REST events; replay is deduplicated (1.952526ms)
+✔ replay fetches all pages and bounds rendered history to 200 (14.940709ms)
+✔ logout while fetching prevents old replay from repopulating the new session (0.494376ms)
+✔ graph distinguishes a destination-only MAC and broadcast from judged devices (0.654796ms)
+✔ counter evidence shows active drops and zero post-filter delivery, never verifies ping (0.543126ms)
+✔ silent segment, counter reset, changed agent and absent readings cannot look like proof (0.461269ms)
+✔ delivery after filtering and unconfirmed static ARP remain explicit failures of evidence (0.404251ms)
+✔ sparkline is empty without a path when no finite scores remain (0.654768ms)
+✔ sparkline places a single finite score and inverts the Y axis (0.335923ms)
+✔ sparkline spaces X by sample index and saturates scores outside 0-100 (0.266944ms)
+✔ shared evidence corpus matches counterInterval reason_code (1.872373ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 14
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 265.56416
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.

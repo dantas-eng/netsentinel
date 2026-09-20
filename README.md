@@ -1,6 +1,5 @@
 # NetSentinel
 
-[![CI](https://github.com/dantas-eng/netsentinel/actions/workflows/ci.yml/badge.svg)](https://github.com/dantas-eng/netsentinel/actions/workflows/ci.yml)
 [![versão](https://img.shields.io/badge/versão-0.7.0-informational)](CHANGELOG.md)
 [![licença](https://img.shields.io/badge/licença-MIT-blue.svg)](LICENSE)
 
@@ -47,7 +46,7 @@ A tabela abaixo relaciona tópicos do projeto aos arquivos onde estão documenta
 ## Recorte desta entrega
 
 Já implementados e cobertos por teste offline: captura, motor fuzzy, backend,
-dashboard, agente de mitigação, ambiente Docker e CI público. O ensaio completo
+dashboard, agente de mitigação, ambiente Docker e configuração de CI ainda não publicada. O ensaio completo
 nas quatro VMs (ping caindo e voltando, nftables no kernel) e o deploy em nuvem
 ainda não foram feitos. O mapa de evidências está em
 [docs/compliance.md](docs/compliance.md).
@@ -68,3 +67,17 @@ Resultado esperado: `Ran 148 tests` e `OK`. No frontend, `cd frontend && npm ci 
 
 MIT. Ver [LICENSE](LICENSE). Fluxo de contribuição em
 [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Integração local 0.7.0 + otimização
+
+Entrega consolidada por arquivos, sem histórico Git ou repositório remoto existente.
+A versão operacional permanece 0.7.0; nenhuma tag Git é afirmada. Publicação e
+primeiro commit serão realizados pelo grupo. O módulo opcional `optimization/`
+usa o baseline manual desta versão e quatro genes; veja
+[ADR 0010](docs/decisions/0010-integracao-070-otimizacao.md),
+[reprodução](research/README.md) e [validação](research/VALIDATION.md).
+
+A comparação experimental vigente usa corpus ARP v2 com requests/replies variados.
+As duas tentativas anteriores são inválidas para comparação atual e ficam em
+`research/historical-invalid/`. Consulte a
+[ADR 0011](docs/decisions/0011-corpus-arp-variavel-e-validade-experimental.md).

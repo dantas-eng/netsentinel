@@ -1,0 +1,162 @@
+{
+  "scope": "Distribui\u00e7\u00e3o do corpus; ativa\u00e7\u00e3o e sensibilidade apenas no treino.",
+  "ratio": {
+    "all": {
+      "n": 600,
+      "min": 0.0,
+      "max": 1.0,
+      "distinct": 219,
+      "at_or_below_floor": 366,
+      "between_floor_and_ceiling": 209,
+      "at_ceiling": 25,
+      "with_requests": 575
+    },
+    "benign": {
+      "n": 420,
+      "min": 0.0,
+      "max": 1.0,
+      "distinct": 114,
+      "at_or_below_floor": 300,
+      "between_floor_and_ceiling": 100,
+      "at_ceiling": 20,
+      "with_requests": 400
+    },
+    "attack": {
+      "n": 180,
+      "min": 0.2222222222222222,
+      "max": 1.0,
+      "distinct": 142,
+      "at_or_below_floor": 66,
+      "between_floor_and_ceiling": 109,
+      "at_ceiling": 5,
+      "with_requests": 175
+    }
+  },
+  "by_family": {
+    "burst": {
+      "n": 70,
+      "min": 0.0,
+      "max": 1.0,
+      "distinct": 27,
+      "at_or_below_floor": 53,
+      "between_floor_and_ceiling": 16,
+      "at_ceiling": 1,
+      "with_requests": 69
+    },
+    "discovery": {
+      "n": 70,
+      "min": 0.0,
+      "max": 0.59375,
+      "distinct": 63,
+      "at_or_below_floor": 59,
+      "between_floor_and_ceiling": 11,
+      "at_ceiling": 0,
+      "with_requests": 70
+    },
+    "migration_ambiguous": {
+      "n": 70,
+      "min": 0.1111111111111111,
+      "max": 1.0,
+      "distinct": 47,
+      "at_or_below_floor": 41,
+      "between_floor_and_ceiling": 23,
+      "at_ceiling": 6,
+      "with_requests": 64
+    },
+    "new_device": {
+      "n": 70,
+      "min": 0.0,
+      "max": 0.8,
+      "distinct": 26,
+      "at_or_below_floor": 51,
+      "between_floor_and_ceiling": 19,
+      "at_ceiling": 0,
+      "with_requests": 70
+    },
+    "normal": {
+      "n": 70,
+      "min": 0.0,
+      "max": 1.0,
+      "distinct": 24,
+      "at_or_below_floor": 53,
+      "between_floor_and_ceiling": 16,
+      "at_ceiling": 1,
+      "with_requests": 69
+    },
+    "poison_fast": {
+      "n": 60,
+      "min": 0.29292929292929293,
+      "max": 1.0,
+      "distinct": 58,
+      "at_or_below_floor": 20,
+      "between_floor_and_ceiling": 37,
+      "at_ceiling": 3,
+      "with_requests": 57
+    },
+    "poison_no_gateway_claim": {
+      "n": 60,
+      "min": 0.2222222222222222,
+      "max": 0.9444444444444444,
+      "distinct": 53,
+      "at_or_below_floor": 25,
+      "between_floor_and_ceiling": 35,
+      "at_ceiling": 0,
+      "with_requests": 60
+    },
+    "poison_slow": {
+      "n": 60,
+      "min": 0.25,
+      "max": 1.0,
+      "distinct": 49,
+      "at_or_below_floor": 21,
+      "between_floor_and_ceiling": 37,
+      "at_ceiling": 2,
+      "with_requests": 58
+    },
+    "unknown_history": {
+      "n": 70,
+      "min": 0.0,
+      "max": 1.0,
+      "distinct": 24,
+      "at_or_below_floor": 43,
+      "between_floor_and_ceiling": 15,
+      "at_ceiling": 12,
+      "with_requests": 58
+    }
+  },
+  "training_rule_activation": {
+    "R1": 114,
+    "R2": 163,
+    "R3": 155,
+    "R4": 0,
+    "R5": 77
+  },
+  "training_one_gene_at_a_time": {
+    "conflict": {
+      "score_changes": 114,
+      "binary_decision_changes": 38,
+      "low": 0.1,
+      "high": 1.0
+    },
+    "frequency": {
+      "score_changes": 199,
+      "binary_decision_changes": 43,
+      "low": 1.0,
+      "high": 20.0
+    },
+    "deviation": {
+      "score_changes": 77,
+      "binary_decision_changes": 28,
+      "low": 0.25,
+      "high": 4.0
+    },
+    "upper": {
+      "score_changes": 0,
+      "binary_decision_changes": 274,
+      "low": 50.0,
+      "high": 85.0
+    }
+  },
+  "r4_limitation": "NEW sem baseline n\u00e3o confirma desvio baixo: R4 permanece inativa por aus\u00eancia de hist\u00f3rico, n\u00e3o por ratio saturado.",
+  "dataset_sha256": "c460c88dbc58ef79bab7ffe3c1b867e11db84e380659873d86308e756f497959"
+}

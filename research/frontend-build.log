@@ -1,0 +1,8 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> netsentinel-dashboard@0.7.0 build
+> node build.mjs
+
+≈ tailwindcss v4.3.3
+
+Done in 52ms

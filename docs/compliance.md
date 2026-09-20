@@ -14,25 +14,21 @@ Os PDFs oficiais prevalecem sobre o guia interno e esta interpretação operacio
 Um arquivo comprova implementação ou intenção documentada; um teste offline
 comprova somente o comportamento exercitado no seu ambiente. Código de teste
 escrito para Docker/Postgres não comprova que esse teste já tenha sido executado.
-Repositório público, tag de release e execução de CI no push inicial estão
-registrados abaixo. URL de PR com autor e revisor distintos e serviço cloud
-implantado continuam pendentes; não se atribuem evidências inexistentes.
-
-A verificação local desta atualização 0.7.0 mediu **148 testes Python**
-(`tests/run_offline.py` → `Ran 148 tests`) e **14 testes JavaScript**
-(`cd frontend && npm test` → `# pass 14`), com Ruff limpo nos arquivos da
-poda. Docker/Postgres/VMs e a checagem visual de CSP/modal na stack em
-execução **não foram refeitos** aqui: a imagem em `:8080` estava desatualizada.
+Não existiu repositório GitHub até esta integração: os dois ramos foram trocados
+como arquivos/ZIP. Publicação, tag Git, proteção de branch, execução remota da CI,
+PRs e revisão entre integrantes continuam pendentes. Configuração escrita de CI
+não comprova execução. A validação local desta integração está em
+`research/VALIDATION.md`; Docker, Postgres real, VMs e deploy não foram validados.
 
 ## Visão geral
 
 | # | Requisito NEXUS | Situação documentada |
 | --- | --- | --- |
-| 1 | Open Source Contribution & Collaboration | Repositório público, tag v0.7.0, CI e proteção de branch ativos; ciclo real de PR/code review entre integrantes ainda pendente. |
+| 1 | Open Source Contribution & Collaboration | **Código pronto, publicação ainda pendente** — licença e documentos presentes; repositório, tag, proteção de branch, CI remota e PR/code review ainda não realizados. |
 | 2 | Telecommunications & Network Security | **Código pronto, validação pendente** — ensaio completo nas quatro VMs. |
 | 3 | Computational Intelligence & Algorithm Optimization | Implementado e verificado offline; parâmetros experimentais ainda sujeitos à validação nas VMs. |
 | 4 | Software Architecture & Design Patterns | Arquitetura documentada, com Observer, Strategy e Repository aplicados e justificados. |
-| 5 | Cloud Computing for Software Development | CI público comprovado no GitHub Actions; deploy em nuvem e execução ligada a PR ainda pendentes. |
+| 5 | Cloud Computing for Software Development | **Código pronto, validação pendente** — workflow disponível; publicação, execução da CI/CD e deploy em nuvem pendentes. |
 
 ## 1. Open Source Contribution & Collaboration
 
@@ -47,18 +43,15 @@ menciona versionamento semântico nas práticas do projeto.
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Fluxo de branches/PR, revisão por outro integrante e verificações locais/CI. |
 | [pyproject.toml](../pyproject.toml) | Versão do pacote declarada como 0.7.0. |
 | [Licenças dos assets](../src/netsentinel/api/static/vendor/licenses/) | Avisos dos componentes de terceiros distribuídos com o dashboard offline. |
-| https://github.com/dantas-eng/netsentinel | Repositório público do projeto (conta `dantas-eng`). |
-| Tag `v0.7.0` → commit `ce2e798` | Release anotada da versão avaliada (merge `feat/melhorias-0.7.0` em `main`). |
-| https://github.com/dantas-eng/netsentinel/actions/runs/35164037168 | CI verde em `main`: Ruff, 148 testes Python, 14 testes JS, container/Postgres. |
-| Proteção de `main` | PR obrigatório, 1 review, checks `Lint e testes offline`, `Frontend offline` e `Container e Postgres sintéticos`. |
 
-**Limite:** publicação e CI não substituem review entre integrantes. Não há nesta
-documentação PR fictício nem aprovação inventada.
+**Limite:** os arquivos fornecidos não representam histórico Git. Não há URL de
+repositório, tag, execução de Actions, PR ou proteção de branch comprovados.
+As referências anteriores a esses recursos foram retiradas por não corresponderem
+à situação informada pelo grupo.
 
-| https://github.com/dantas-eng/netsentinel/pull/1 | PR aberto (`docs/publicacao-github` → `main`); CI verde em https://github.com/dantas-eng/netsentinel/actions/runs/35164039546. **Aguardando review e merge por integrante distinto do autor.** |
-
-**Para fechar:** aprovação de review e merge do PR #1 (ou equivalente) por integrante
-distinto do autor, com comentários ou aprovação verificável. Conservar o histórico.
+**Para fechar:** publicar o primeiro commit, configurar a proteção de branch,
+executar a CI e realizar PR com revisão por integrante distinto do autor.
+Conservar as evidências reais quando essas ações ocorrerem.
 
 ## 2. Telecommunications & Network Security
 
@@ -125,7 +118,11 @@ Decisões relacionadas: [ADR 0002](decisions/0002-reputacao-e-janela-demo.md),
 na integração; não é apenas uma tela exibindo scores fixos. Isso não comprova
 acurácia, generalização ou taxa de falsos positivos em redes reais. Funções de
 pertinência e regras são parâmetros experimentais aprovados; medir frequência real
-e comportamento das janelas no ensaio. GA e ajuste evolutivo continuam fora do MVP.
+e comportamento das janelas no ensaio. A extensão offline AG/NSGA-II está integrada em `optimization/`, sem substituir o
+classificador operacional. Consulte [ADR 0010](decisions/0010-integracao-070-otimizacao.md)
+e [relatório atual](../research/results/report.md). As comparações 0.6.0 e 0.7.0 com ratio constante foram invalidadas para a avaliação
+atual e preservadas em `research/historical-invalid/`. A comparação vigente usa
+corpus v2 conforme [ADR 0011](decisions/0011-corpus-arp-variavel-e-validade-experimental.md).
 
 ## 4. Software Architecture & Design Patterns
 
@@ -162,20 +159,20 @@ O deploy e sua configuração final ainda precisam ser realizados e comprovados.
 
 | Evidência concreta | Alcance e limite |
 | --- | --- |
-| [Dockerfile](../Dockerfile) e [frontend/build.mjs](../frontend/build.mjs) | Build multi-stage de frontend e Python, com assets locais e runtime Linux. A imagem é construída e executada pelo job `Container e Postgres sintéticos` do CI. |
+| [Dockerfile](../Dockerfile) e [frontend/build.mjs](../frontend/build.mjs) | Build multi-stage de frontend e Python, com assets locais e runtime Linux. O job `Container e Postgres sintéticos` está configurado, mas sua execução remota não foi comprovada. |
 | [docker-compose.yml](../docker-compose.yml) | Serviço sintético local e Postgres persistente. Compose local não equivale a cloud. |
 | [deploy/start-container.sh](../deploy/start-container.sh), [api/wsgi.py](../src/netsentinel/api/wsgi.py) e [settings.py](../src/netsentinel/api/settings.py) | Migração antes do servidor, Gunicorn com um worker, PORT configurável, fonte sintética e exigência de Postgres no modo cloud. |
 | [migrations/](../migrations/) e [repositories/migrate.py](../src/netsentinel/repositories/migrate.py) | Schema versionado com Alembic. |
 | [test_repository.py](../tests/unit/test_repository.py), `RepositoryTests.test_migrations_match_models_and_repeat_without_changes` e `test_initial_migration_compiles_for_postgres_without_a_live_database` | Migração exercitada em SQLite e compilação SQL para Postgres; não comprovam execução em Postgres real. |
-| [.github/workflows/ci.yml](../.github/workflows/ci.yml) | Gatilho pull_request e push em main; execuções verdes em https://github.com/dantas-eng/netsentinel/actions/runs/35164037168 (push em main) e https://github.com/dantas-eng/netsentinel/actions/runs/35164039546 (PR #1). |
-| [tests/container_smoke.py](../tests/container_smoke.py) | Teste HTTP sobre o Compose, com sessão/CSRF e dados sintéticos. Executado no CI junto da verificação da revisão Alembic em Postgres real; não testa política de cookies do browser. |
+| [.github/workflows/ci.yml](../.github/workflows/ci.yml) | Gatilhos pull_request e push em main escritos no workflow; execução no GitHub Actions pendente de publicação. |
+| [tests/container_smoke.py](../tests/container_smoke.py) | Teste HTTP sobre o Compose, com sessão/CSRF e dados sintéticos. Execução no CI e em Postgres real pendente; não testa política de cookies do browser. |
 
 Roteiros: [docs/docker.md](docker.md) e [docs/backend.md](backend.md).
 
 **Para fechar:** concluir deploy em GCP Cloud Run com Postgres gerenciado e HTTPS;
 registrar URL e revisão/commit implantados; configurar e demonstrar o fluxo de
-publicação/CD. Repositório público, CI ligada a PR e build/Compose com migração em
-Postgres real já estão registrados acima. Registrar
+publicação/CD. Também publicar o repositório, executar CI em PR e validar build/Compose e migração
+em Postgres real. Registrar
 as evidências sem credenciais. O ambiente cloud usa dados sintéticos e não se conecta
 à rede isolada do ataque, conforme a separação já aprovada.
 

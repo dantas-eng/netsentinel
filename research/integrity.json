@@ -1,0 +1,6 @@
+{
+  "base_070_source_files_unchanged": 110,
+  "historical_files_intact": true,
+  "scenario_contexts_preserved": 600,
+  "dataset_changed": "ARP opcode mixture, derived ratio and claims for requests; dataset_version=2"
+}
