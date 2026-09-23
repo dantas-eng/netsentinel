@@ -14,44 +14,52 @@ Os PDFs oficiais prevalecem sobre o guia interno e esta interpretação operacio
 Um arquivo comprova implementação ou intenção documentada; um teste offline
 comprova somente o comportamento exercitado no seu ambiente. Código de teste
 escrito para Docker/Postgres não comprova que esse teste já tenha sido executado.
-Não existiu repositório GitHub até esta integração: os dois ramos foram trocados
-como arquivos/ZIP. Publicação, tag Git, proteção de branch, execução remota da CI,
-PRs e revisão entre integrantes continuam pendentes. Configuração escrita de CI
-não comprova execução. A validação local desta integração está em
-`research/VALIDATION.md`; Docker, Postgres real, VMs e deploy não foram validados.
+Nesta auditoria, o repositório GitHub, a tag `v0.7.0`, o PR #3, a revisão e a execução
+dos checks de CI foram comprovados. A proteção da branch ainda não foi comprovada.
+A validação local da extensão de otimização está em `research/VALIDATION.md`;
+Docker, Postgres real, VMs, tráfego real e deploy em nuvem continuam dependendo de
+evidência de execução correspondente.
 
 ## Visão geral
 
 | # | Requisito NEXUS | Situação documentada |
 | --- | --- | --- |
-| 1 | Open Source Contribution & Collaboration | **Código pronto, publicação ainda pendente** — licença e documentos presentes; repositório, tag, proteção de branch, CI remota e PR/code review ainda não realizados. |
+| 1 | Open Source Contribution & Collaboration | **Parcialmente comprovado** — repositório GitHub, licença, documentação, tag v0.7.0, PR real, revisão e execução de CI já comprovados; proteção da branch ainda não comprovada. |
 | 2 | Telecommunications & Network Security | **Código pronto, validação pendente** — ensaio completo nas quatro VMs. |
-| 3 | Computational Intelligence & Algorithm Optimization | Implementado e verificado offline; parâmetros experimentais ainda sujeitos à validação nas VMs. |
+| 3 | Computational Intelligence & Algorithm Optimization | **Implementado e verificado offline** — classificador fuzzy operacional mantido; extensão GA/NSGA-II validada por testes e experimento reprodutível; tráfego real, VMs e aceitação da trilha ainda pendentes. |
 | 4 | Software Architecture & Design Patterns | Arquitetura documentada, com Observer, Strategy e Repository aplicados e justificados. |
-| 5 | Cloud Computing for Software Development | **Código pronto, validação pendente** — workflow disponível; publicação, execução da CI/CD e deploy em nuvem pendentes. |
+| 5 | Cloud Computing for Software Development | **Parcialmente comprovado** — workflow de CI disponível e execução em PR comprovada; deploy em nuvem e fluxo de CD ainda pendentes. |
 
 ## 1. Open Source Contribution & Collaboration
+
+**Situação: parcialmente comprovado.** O repositório está publicado no GitHub e
+já existe evidência de versionamento, documentação, tag, pull request revisado e
+execução da CI. A proteção da branch ainda não foi comprovada nesta auditoria.
 
 **Exigência:** projeto publicado com licença aberta, README, CONTRIBUTING.md e pelo
 menos um ciclo real de pull request revisado entre integrantes. O roteiro também
 menciona versionamento semântico nas práticas do projeto.
 
-| Evidência disponível | O que demonstra |
+| Evidência concreta | O que demonstra |
 | --- | --- |
+| [Repositório GitHub](https://github.com/dantas-eng/netsentinel) | Repositório do projeto `dantas-eng/netsentinel`. |
 | [LICENSE](../LICENSE) | Licença MIT para o código do NetSentinel. |
 | [README.md](../README.md) | Descrição do projeto, instalação, operação, testes e índice da documentação. |
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Fluxo de branches/PR, revisão por outro integrante e verificações locais/CI. |
 | [pyproject.toml](../pyproject.toml) | Versão do pacote declarada como 0.7.0. |
+| Tag `v0.7.0` no remoto `origin` | Versionamento da entrega publicado no repositório remoto. |
+| PR #3 `docs: update validation evidence README` | Ciclo real de pull request com revisão por integrante distinto do autor e merge na `main`. |
+| Checks do PR #3 | Execução remota da CI associada ao pull request, com os três checks concluídos com sucesso. |
 | [Licenças dos assets](../src/netsentinel/api/static/vendor/licenses/) | Avisos dos componentes de terceiros distribuídos com o dashboard offline. |
 
-**Limite:** os arquivos fornecidos não representam histórico Git. Não há URL de
-repositório, tag, execução de Actions, PR ou proteção de branch comprovados.
-As referências anteriores a esses recursos foram retiradas por não corresponderem
-à situação informada pelo grupo.
+**Limites:** a proteção da branch `main` não foi comprovada nesta auditoria.
+A existência da configuração de CI e a execução da CI no PR comprovam o fluxo de
+integração contínua exercitado, mas não comprovam proteção de branch nem práticas
+que não tenham evidência correspondente.
 
-**Para fechar:** publicar o primeiro commit, configurar a proteção de branch,
-executar a CI e realizar PR com revisão por integrante distinto do autor.
-Conservar as evidências reais quando essas ações ocorrerem.
+**Para fechar:** registrar evidência verificável da proteção da branch, caso ela
+seja exigida para a entrega. Conservar URL do repositório, tag, PR, revisão e
+checks associados ao ciclo real.
 
 ## 2. Telecommunications & Network Security
 
@@ -96,33 +104,33 @@ visual e o funcionamento do nftables no kernel continuam pendentes.
 
 ## 3. Computational Intelligence & Algorithm Optimization
 
-**Exigência:** aplicar algoritmo bioinspirado ou metaheurística para otimização ou
-classificação real no sistema. Lógica fuzzy está explicitamente entre as opções
-do roteiro; não é necessário introduzir algoritmo genético para justificar esta escolha.
+**Situação: implementado e verificado offline; validação em tráfego/VM real pendente.** O classificador fuzzy 0.7.0 continua sendo a estratégia operacional manual do sistema. A extensão AG/NSGA-II foi implementada em `optimization/` para otimização offline dos parâmetros do classificador, sem substituição automática da estratégia operacional.
+
+**Exigência:** aplicar algoritmo bioinspirado ou metaheurística para otimização ou classificação. A extensão utiliza Algoritmo Genético (GA) e NSGA-II para otimizar os parâmetros do classificador fuzzy.
 
 | Evidência concreta | O que demonstra |
 | --- | --- |
-| [analysis/features.py](../src/netsentinel/analysis/features.py) | Extrai conflito ARP, frequência, reputação, desvio de volume e `arp_reply_ratio` por dispositivo. |
-| [fuzzy/membership.py](../src/netsentinel/analysis/fuzzy/membership.py), [rules.py](../src/netsentinel/analysis/fuzzy/rules.py) e [engine.py](../src/netsentinel/analysis/fuzzy/engine.py) | Cinco regras Mamdani, operações min/max e defuzzificação por centroide com scikit-fuzzy. Score 0–100, limiares 35/65. |
-| [analysis/contracts.py](../src/netsentinel/analysis/contracts.py) e [services/pipeline.py](../src/netsentinel/services/pipeline.py) | Providers injetados de reputação/baseline e uso da estratégia no fluxo efetivo do backend. |
-| [test_fuzzy.py](../tests/unit/test_fuzzy.py), `RuleTests.test_each_rule_in_isolation`, `InferenceTests.test_r2_survives_missing_baseline` e `test_no_evidence_abstains_after_rules` | Regras exercitadas, classificação possível sem baseline e abstenção somente quando nenhuma regra dispara. |
-| [test_fuzzy_demo.py](../tests/integration/test_fuzzy_demo.py), `DemoAcceptance.test_new_attacker_without_baseline_with_conflict` e `test_new_attacker_without_baseline_without_conflict` | PCAP sintético → captura → classificação do Atacante NEW sem baseline como suspeito, inclusive sem conflito observado. |
-| [test_repository.py](../tests/unit/test_repository.py), `RepositoryTests.test_baseline_converts_each_window_bytes_to_bytes_per_second` | Cinco janelas com 80/160/240/320/400 bytes resultam em mediana de 30 bytes/s, respeitando a unidade do provider. |
-| [docs/validation/fuzzy-metrics.md](validation/fuzzy-metrics.md), gerado por [tools/fuzzy_metrics.py](../tools/fuzzy_metrics.py) | Consistência interna em 15 cenários sintéticos escritos pela equipe; `RATIO_HIGH_FLOOR=0.5` é o único piso com 15/15. **Não é acurácia nem taxa de falso positivo em rede real.** |
+| [optimization/classifier.py](../src/netsentinel/optimization/classifier.py) | Estratégia fuzzy parametrizada para avaliar candidatos sem alterar o classificador operacional. |
+| [optimization/experiment.py](../src/netsentinel/optimization/experiment.py) | Execução dos experimentos GA e NSGA-II, com seleção baseada na validação e teste reservado. |
+| [optimization/dataset.py](../src/netsentinel/optimization/dataset.py) | Geração e particionamento estratificado do corpus sintético utilizado no experimento. |
+| [optimization/diagnostics.py](../src/netsentinel/optimization/diagnostics.py) | Diagnósticos de cobertura e variação do corpus antes da avaliação. |
+| [research/tests/test_optimization.py](../research/tests/test_optimization.py) | 18 testes da extensão de otimização executados com sucesso. |
+| [ADR 0009](decisions/0009-otimizacao-evolutiva-offline.md) | Define escopo, genes, protocolo experimental, critérios de seleção e limites da extensão offline. |
+| [ADR 0011](decisions/0011-corpus-arp-variavel-e-validade-experimental.md) | Documenta a correção do corpus de ARP e invalida as comparações históricas com ratio constante. |
+| [research/results/report.md](../research/results/report.md) | Relatório consolidado dos experimentos, métricas, dispersão entre sementes e limitações. |
+| [research/results/results.json](../research/results/results.json) | Resultados estruturados das 20 execuções GA e 20 execuções NSGA-II. |
+| [research/results/diagnostics.json](../research/results/diagnostics.json) | Metadados e diagnósticos do corpus utilizado na avaliação oficial. |
+| [research/VALIDATION.md](../research/VALIDATION.md) | Registro do protocolo, testes, reprodução e limites conhecidos da validação. |
 
-Decisões relacionadas: [ADR 0002](decisions/0002-reputacao-e-janela-demo.md),
-[ADR 0004](decisions/0004-promocao-manual-de-reputacao.md) e
-[ADR 0005](decisions/0005-baseline-persistido-e-migracoes.md).
+**Protocolo verificado:** foram avaliados 600 cenários sintéticos independentes, sendo 420 benignos e 180 ataques, com separação fixa em 360 exemplos de treino, 120 de validação e 120 de teste. Cada cenário permanece integralmente em uma única divisão. GA e NSGA-II foram executados em 20 sementes cada, totalizando 40 execuções, com população de 40 indivíduos e 40 gerações. O conjunto de teste não foi usado para otimização ou seleção dos parâmetros.
 
-**Alcance:** a inferência classifica dados derivados de pacotes, com providers reais
-na integração; não é apenas uma tela exibindo scores fixos. Isso não comprova
-acurácia, generalização ou taxa de falsos positivos em redes reais. Funções de
-pertinência e regras são parâmetros experimentais aprovados; medir frequência real
-e comportamento das janelas no ensaio. A extensão offline AG/NSGA-II está integrada em `optimization/`, sem substituir o
-classificador operacional. Consulte [ADR 0010](decisions/0010-integracao-070-otimizacao.md)
-e [relatório atual](../research/results/report.md). As comparações 0.6.0 e 0.7.0 com ratio constante foram invalidadas para a avaliação
-atual e preservadas em `research/historical-invalid/`. A comparação vigente usa
-corpus v2 conforme [ADR 0011](decisions/0011-corpus-arp-variavel-e-validade-experimental.md).
+**Reprodução:** uma execução independente reproduziu exatamente as 40 soluções selecionadas e suas métricas de validação/teste. As seis diferenças encontradas ficaram restritas ao `training_archive`; os objetos lógicos do dataset foram idênticos, com diferença de SHA explicada pela serialização JSON.
+
+**Resultados documentados:** no split sintético reservado, o baseline manual apresentou F1 de 0.4950; GA apresentou F1 médio de 0.6406 e NSGA-II de 0.6321. Esses números descrevem este experimento e não constituem garantia de superioridade em tráfego real. As métricas incluem precisão, recall, F1 e FPR, com abstenções tratadas separadamente e sem remoção do denominador.
+
+**Limites:** o corpus é sintético e a validação foi offline. Não há ainda validação em tráfego real, ensaio completo nas VMs, adoção operacional dos parâmetros otimizados ou conclusão de eficácia de defesa em ambiente real. A aceitação da trilha pelo professor e os ensaios de VM permanecem pendentes. A antiga ADR 0010 é histórica e não deve ser usada como fonte do protocolo experimental atual.
+
+**Base operacional relacionada:** [analysis/features.py](../src/netsentinel/analysis/features.py), [fuzzy/membership.py](../src/netsentinel/analysis/fuzzy/membership.py), [fuzzy/rules.py](../src/netsentinel/analysis/fuzzy/rules.py), [fuzzy/engine.py](../src/netsentinel/analysis/fuzzy/engine.py) e [services/pipeline.py](../src/netsentinel/services/pipeline.py) permanecem como a implementação operacional do classificador fuzzy 0.7.0.
 
 ## 4. Software Architecture & Design Patterns
 
@@ -152,30 +160,27 @@ usado, suas limitações e como a composição ocorre, não apenas citar os nome
 
 ## 5. Cloud Computing for Software Development
 
-**Situação: código pronto, validação pendente.** Essa expressão descreve a aplicação,
-containerização e configuração de CI disponíveis; **não significa que publicação/CD
-em Cloud Run já estejam implementados ou que exista um serviço público implantado**.
-O deploy e sua configuração final ainda precisam ser realizados e comprovados.
+**Situação: parcialmente comprovado.** O workflow de CI está versionado e houve
+execução real associada ao PR #3. O deploy em nuvem e o fluxo de CD ainda não foram
+comprovados nesta auditoria.
 
-| Evidência concreta | Alcance e limite |
+**Exigência:** desenvolvimento com serviços de nuvem e integração/entrega contínua
+automatizada, conforme o requisito NEXUS.
+
+| Evidência concreta | O que demonstra |
 | --- | --- |
-| [Dockerfile](../Dockerfile) e [frontend/build.mjs](../frontend/build.mjs) | Build multi-stage de frontend e Python, com assets locais e runtime Linux. O job `Container e Postgres sintéticos` está configurado, mas sua execução remota não foi comprovada. |
-| [docker-compose.yml](../docker-compose.yml) | Serviço sintético local e Postgres persistente. Compose local não equivale a cloud. |
-| [deploy/start-container.sh](../deploy/start-container.sh), [api/wsgi.py](../src/netsentinel/api/wsgi.py) e [settings.py](../src/netsentinel/api/settings.py) | Migração antes do servidor, Gunicorn com um worker, PORT configurável, fonte sintética e exigência de Postgres no modo cloud. |
-| [migrations/](../migrations/) e [repositories/migrate.py](../src/netsentinel/repositories/migrate.py) | Schema versionado com Alembic. |
-| [test_repository.py](../tests/unit/test_repository.py), `RepositoryTests.test_migrations_match_models_and_repeat_without_changes` e `test_initial_migration_compiles_for_postgres_without_a_live_database` | Migração exercitada em SQLite e compilação SQL para Postgres; não comprovam execução em Postgres real. |
-| [.github/workflows/ci.yml](../.github/workflows/ci.yml) | Gatilhos pull_request e push em main escritos no workflow; execução no GitHub Actions pendente de publicação. |
-| [tests/container_smoke.py](../tests/container_smoke.py) | Teste HTTP sobre o Compose, com sessão/CSRF e dados sintéticos. Execução no CI e em Postgres real pendente; não testa política de cookies do browser. |
+| [.github/workflows/ci.yml](../.github/workflows/ci.yml) | Workflow versionado com gatilhos para pull request, push na `main` e execução manual. |
+| Checks do PR #3 | Execução remota da CI associada a um pull request real, com os três checks concluídos com sucesso. |
+| [docker-compose.yml](../docker-compose.yml) | Ambiente local com aplicação e Postgres para validação integrada. |
+| [tests/container_smoke.py](../tests/container_smoke.py) | Teste HTTP sobre o Compose, com sessão/CSRF e dados sintéticos. |
 
-Roteiros: [docs/docker.md](docker.md) e [docs/backend.md](backend.md).
+**Limites:** a existência do workflow e a execução do PR comprovam CI exercitada,
+mas não comprovam deploy em provedor de nuvem, fluxo de CD, Postgres gerenciado ou
+execução do ambiente em VMs.
 
-**Para fechar:** concluir deploy em GCP Cloud Run com Postgres gerenciado e HTTPS;
-registrar URL e revisão/commit implantados; configurar e demonstrar o fluxo de
-publicação/CD. Também publicar o repositório, executar CI em PR e validar build/Compose e migração
-em Postgres real. Registrar
-as evidências sem credenciais. O ambiente cloud usa dados sintéticos e não se conecta
-à rede isolada do ataque, conforme a separação já aprovada.
-
+**Para fechar:** registrar evidência do deploy em nuvem e do fluxo de CD, caso
+esses itens sejam exigidos para a entrega, além de conservar os resultados dos
+ensaios de container/Postgres quando executados no ambiente correspondente.
 ## Condição de atualização deste mapa
 
 Trocar o estado de um requisito somente após anexar referência verificável à sua
