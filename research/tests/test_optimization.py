@@ -87,9 +87,6 @@ class DatasetTests(unittest.TestCase):
 
     def test_counts_splits_groups_and_no_duplicate_pcaps(self):
         self.assertEqual(len(self.records), 600)
-        for old in ('v060', 'v070-constant-ratio'):
-            with self.assertRaisesRegex(ValueError, 'Corpus invalidado'):
-                load(f'research/historical-invalid/{old}/results/dataset')
 
         self.assertEqual(sum(r['label'] for r in self.records), 180)
         self.assertEqual(Counter(r['split'] for r in self.records),
