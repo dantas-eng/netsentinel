@@ -13,3 +13,7 @@ __pycache__/
 node_modules/
 
 .env.docker
+
+# Corpus sintético versionável da extensão; capturas reais continuam ignoradas.
+!research/results/dataset/pcaps/*.pcap
+!research/historical-invalid/*/results/dataset/pcaps/*.pcap
