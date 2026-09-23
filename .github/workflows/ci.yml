@@ -29,7 +29,9 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
-          cache-dependency-path: pyproject.toml
+          cache-dependency-path: |
+            pyproject.toml
+            requirements-optimization.txt
 
       - name: Instalar dependências
         id: install
@@ -37,6 +39,16 @@ jobs:
 
       - name: Ruff
         run: python -m ruff check .
+
+      - name: Instalar dependências da otimização
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: python -m pip install -r requirements-optimization.txt
+
+      - name: Testes da otimização GA e NSGA-II
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          PYTHONPATH: src
+        run: python -m unittest research.tests.test_optimization -v
 
       # Executar também quando o lint falhar, para o PR mostrar os dois resultados.
       - name: Testes offline
