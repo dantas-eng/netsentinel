@@ -41,8 +41,10 @@ nftables, Docker ou banco. Instalar DEAP permanece opcional para executar o MVP.
 - `historical-invalid/v070-constant-ratio/`: comparação degenerada, invalidada;
   ratio=1 encobria os genes de frequência/desvio e bloqueava R4/R5.
 
-Os históricos não foram apagados nem recalculados. Avisos INVALIDO.md e hashes
-preserved-sha256.json identificam os originais. O antigo empate não é evidência
+Relatórios e avisos INVALIDO.md foram conservados. Artefatos históricos pesados
+e seus manifestos foram removidos do checkout no commit 7c88d5d; podem ser
+consultados no histórico Git anterior. Não afirmar que os PCAPs/manifestos antigos
+continuam neste diretório. O antigo empate não é evidência
 de equivalência entre algoritmos. Não misturar métricas de corpus/baselines diferentes.
 
 ## Dados sintéticos e rótulos
@@ -116,4 +118,6 @@ a análise não prova que 0,5 seja ótimo. Nenhum modelo substitui a defesa oper
 de caracterização/diversidade de tráfego benigno e malicioso, não fontes dos dados,
 intervalos sorteados ou features desta entrega. Nenhum registro foi importado.
 [Documentação DEAP](https://deap.readthedocs.io/en/master/api/tools.html).
-A trilha própria ainda depende do aceite docente; VMs e cloud não foram validados.
+A trilha própria foi aprovada pelo professor conforme resposta de e-mail
+fornecida pelo grupo em 28/09/2026 (data do registro, não do envio).
+VMs e deploy cloud continuam pendentes; container/Postgres foram exercitados na CI.

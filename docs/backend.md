@@ -159,11 +159,11 @@ python -m gunicorn --workers 1 --threads 8 --bind 0.0.0.0:8080 \
   'netsentinel.api.wsgi:create_service()'
 ```
 
-Ajustar a porta ao PORT do Cloud Run na etapa de deploy. Exige HTTPS no acesso
+Ajustar a porta ao PORT do provedor na etapa de deploy (Render, ADR 0012). Exige HTTPS no acesso
 externo. **Um worker e uma instância** nesta implementação: fonte e EventBus são
 locais ao processo. Não configurar múltiplas réplicas sem coordenação de fonte,
-sessões e mensagens. Dockerfile e Compose foram adicionados na versão 0.6.0. CI/CD de publicação e
-configuração final de Cloud Run/Postgres continuam para a etapa de deploy; nada foi publicado aqui.
+sessões e mensagens. Dockerfile e Compose foram adicionados na versão 0.6.0. CD para Render + Supabase está preparado no workflow, desativado até configurar
+as contas; seguir docs/closure/cloud.md. Não houve publicação do serviço nesta etapa.
 
 ## Verificação
 
@@ -172,7 +172,8 @@ python -m ruff check .
 PYTHONPATH=src python tests/run_offline.py
 ```
 
-148 testes Python aprovados (`tests/run_offline.py` → `Ran 148 tests`); Ruff sem apontamentos nos arquivos da poda. O frontend acrescenta
+159 testes Python aprovados (`tests/run_offline.py` → `Ran 159 tests`,
+incluindo 11 de entrega cloud); Ruff sem apontamentos nos arquivos da poda. O frontend acrescenta
 14 testes JavaScript (`cd frontend` e `npm test` → `# pass 14`) e build local de assets. SQLite real cobre persistência após
 reabertura, reputação, auditoria, calibração e migrations. O teste Alembic compara
 o schema criado com os modelos; também gera SQL PostgreSQL offline.
@@ -180,7 +181,8 @@ o schema criado com os modelos; também gera SQL PostgreSQL offline.
 A integração usa PCAP/Scapy, Repository SQL, Mamdani, Strategy, API do agente e
 Socket.IO test_client. O kernel do agente e a conexão HTTP com ele são simulados.
 O teste de sessão verifica cookies HTTP com o test_client Flask. Ainda falta
-ensaio de browser/WebSocket sobre rede, PostgreSQL real, VirtualBox e nftables.
+ensaio de browser/WebSocket sobre rede, Postgres gerenciado, VirtualBox e nftables.
+Postgres real em container já foi exercitado pela CI pública.
 
 Referências: https://flask-socketio.readthedocs.io/en/latest/getting_started.html
 https://docs.sqlalchemy.org/en/20/orm/session_basics.html
@@ -191,5 +193,6 @@ https://alembic.sqlalchemy.org/en/latest/batch.html
 
 Dockerfile/Compose e instruções para Windows em `docs/docker.md`. O entrypoint
 faz migração antes de iniciar a factory cloud em Gunicorn, com um worker.
-Docker/Compose, Postgres real e browser ainda não foram validados neste ambiente.
+A CI pública validou Docker/Compose e Postgres real em container; browser e
+Postgres gerenciado continuam pendentes.
 O critério de disparo da defesa agora exige duas avaliações consecutivas (ADR 0007).

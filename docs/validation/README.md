@@ -1,14 +1,11 @@
 # Evidências de validação
 
-Este diretório guarda artefatos que comprovam comportamento. Está vazio de
-ensaios: nada aqui foi fabricado para parecer concluído.
+| Requisito | Evidência | Alcance/pendência |
+|---|---|---|
+| Segurança | [Roteiro VMs](../closure/lab-validation.md) e [ficha](../closure/evidence-template.md) | Ensaio real ainda pendente; não fabricar PCAP/contadores de aceitação |
+| Inteligência | [fuzzy-metrics.md](fuzzy-metrics.md) e [research/results/report.md](../../research/results/report.md) | Resultados sintéticos; não são validação em rede real |
+| Cloud | [CI main](https://github.com/dantas-eng/netsentinel/actions/runs/35897359835) | Container/Postgres real comprovados; Render/Supabase/CD e browser ainda pendentes |
+| Preparação de fechamento | [closure-preparation.md](closure-preparation.md) | Testes locais de scripts/configuração; não é deploy |
 
-Mapeamento dos blocos **Para fechar:** de [docs/compliance.md](../compliance.md):
-
-| Requisito                      | O que depositar aqui                                                                                                                                             | Status                                                                                                                                                                                      |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2 — Telecom e segurança        | PCAP/log do Sensor com visibilidade unicast; registro do ataque sem forwarding; deltas de `seen`/`dropped`/`passed` do mesmo ensaio; confirmação de ARP estático | Ainda não existe — falta o ensaio nas quatro VMs                                                                                                                                            |
-| 3 — Inteligência computacional | Relatório gerado pelo harness                                                                                                                                    | Já existe: [fuzzy-metrics.md](fuzzy-metrics.md), gerado por `tools/fuzzy_metrics.py`                                                                                                        |
-| 5 — Cloud                      | Saída do Compose com Postgres real; revisão Alembic; URL e commit do deploy                                                                                      | Parcial — o job `container` do CI já builda a imagem, sobe o Compose com Postgres real e confere a revisão Alembic (ver PR #1); ainda falta conta de nuvem e deploy público (ex: Cloud Run) |
-
-Não colocar senha, token, `.env` ou hash de credencial.
+Depositar aqui ou referenciar artefatos sanitizados dos ensaios, com data,
+responsável, commit e ambiente. Não anexar senha, token, cookie ou URL de banco.

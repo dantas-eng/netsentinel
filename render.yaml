@@ -1,0 +1,26 @@
+# ADR 0012: plano gratuito, dados sintéticos, banco externo Supabase.
+# O CD é acionado pelo GitHub Actions somente após os três checks.
+services:
+  - type: web
+    name: netsentinel
+    runtime: docker
+    plan: free
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    autoDeployTrigger: "off"
+    healthCheckPath: /health
+    numInstances: 1
+    envVars:
+      - key: APP_MODE
+        value: cloud
+      - key: PORT
+        value: "8080"
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: OPERATOR_USERNAME
+        value: operador
+      - key: OPERATOR_PASSWORD_HASH
+        sync: false

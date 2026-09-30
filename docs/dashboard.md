@@ -78,7 +78,7 @@ Stack preservada: Flask, JavaScript puro, Tailwind e vis.js Network. Os fontes s
 As versões diretas ficam registradas em `static/vendor/versions.json`.
 Conteúdo recebido é inserido com textContent, não como HTML executável.
 
-## Validação desta entrega
+## Validação da entrega 0.7.0 e atualização de fechamento
 
 - **148 testes Python e Ruff aprovados** (`tests/run_offline.py` → `Ran 148 tests`):
   preservam os testes anteriores e cobrem CSP no header HTTP, corpus de evidência,
@@ -92,17 +92,19 @@ Conteúdo recebido é inserido com textContent, não como HTML executável.
   `Eventos conectados` e seções novas do modal) **não foi refeita** nesta
   atualização: a imagem Docker em `:8080` estava desatualizada.
 - **Build e sintaxe aprovados:** Tailwind, cópia dos bundles e `node --check` nos
-  módulos; CI recebeu job frontend. O workflow ainda não rodou em GitHub real.
+  módulos; a CI pública já executou os jobs frontend e container/Postgres.
 
-Não houve revalidação visual ou interação em navegador nesta atualização,
-nem PostgreSQL real nem ensaio das VMs.
+Nesta preparação de fechamento não houve interação em navegador nem ensaio
+das VMs. Postgres real em container tem evidência na CI; Supabase ainda não.
+A suíte atual acrescenta 11 testes de entrega cloud aos 148 do MVP.
 Os testes JavaScript usam funções puras e fetch simulado; Flask/Socket.IO usam
 os clientes de teste existentes. Não confundir esses resultados com a demo ao vivo.
 
 Na validação das VMs: abrir no notebook, verificar login HTTP e reconexão,
 reconhecimento/calibração e grafo, depois acompanhar ping, ARP e contadores no
 ataque sem encaminhamento. A coleta real e a mitigação continuam restritas à
-rede isolada autorizada. Postgres real e Cloud Run pertencem à etapa de deploy.
+rede isolada autorizada. A CI pública já validou Postgres em container; banco gerenciado e deploy
+Render/Supabase seguem para validação conforme docs/closure/cloud.md.
 
 Referências de implementação:
 [vis.js Network](https://visjs.github.io/vis-network/docs/network/),

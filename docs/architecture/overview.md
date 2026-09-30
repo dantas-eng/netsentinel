@@ -108,7 +108,10 @@ Isso permite testar o fluxo e executar o ambiente sintético com contratos está
 
 `ReputationProvider` e `BaselineProvider` também são dependências injetadas por
 contrato. Essa injeção permite testar ausência/falha de histórico sem colocar SQL
-no motor; não representa aprendizado automático ou GA já implementado.
+no motor; não realiza aprendizado automático em produção. A extensão offline
+[optimization](../../src/netsentinel/optimization/) implementa AG/NSGA-II e
+`ParameterizedFuzzyRiskStrategy`, reutilizando o contrato de classificação e as
+regras do baseline. Ver [ADR 0009](../decisions/0009-otimizacao-evolutiva-offline.md).
 `SecurityIdentity` (`attacker_mac` + `trusted_bindings()`) é o contrato que
 separa inventário confiável da autorização de mitigação.
 
@@ -120,8 +123,8 @@ entre mitigação sintética e agente real. A integração
 `test_pcap_to_repository_strategy_agent_and_websocket` exercita a composição completa offline.
 
 **Limite:** o fuzzy é a única estratégia de classificação de produção hoje.
-Troca futura por outro algoritmo exige implementar/testar seu contrato; o padrão
-não comprova que GA ou qualquer alternativa já exista. A política de duas avaliações
+A estratégia parametrizada já existe nos experimentos, mas não há seletor de
+modelo no backend/dashboard; a operação continua usando o baseline manual. A política de duas avaliações
 fica em `SecurityDemo`, não é reimplementada pelas estratégias de transporte.
 
 ## Repository — persistência fora do motor de análise
@@ -152,8 +155,9 @@ e [ADR 0005](../decisions/0005-baseline-persistido-e-migracoes.md).
 `test_baseline_converts_each_window_bytes_to_bytes_per_second` exercitam persistência,
 semântica de reputação e unidade de calibração.
 
-**Limite:** os testes executados usam SQLite real e SQL PostgreSQL compilado offline.
-Compatibilidade com Postgres em execução ainda precisa ser demonstrada. Repository
+**Limite:** testes locais usam SQLite real e SQL PostgreSQL compilado offline.
+A CI pública também exercitou migração e smoke HTTP com Postgres real em container.
+A compatibilidade com o Postgres gerenciado escolhido ainda precisa ser validada. Repository
 isola detalhes SQL dos consumidores, mas não torna gratuita uma mudança de schema
 ou de tecnologia de banco.
 
@@ -173,9 +177,9 @@ Strategy e Flask. Só o kernel e o transporte HTTP são substituídos; não houv
 envio real de ataque, filtro nft aplicado nem ping entre VMs nesse ensaio. No
 teste de transmissão limitada, o sender é um mock e o relógio é simulado.
 
-A sequência do laboratório prepara o agente antes do ataque e inicia o executor
-depois que a perda de ping fica visível, para que uma resposta automática rápida
-não esconda o efeito do envenenamento.
+A sequência do laboratório prepara agente, backend e login no dashboard antes
+do ataque, conforme lab/README.md. Duas avaliações qualificantes são exigidas,
+mas não garantem atraso fixo: a queda perceptível do ping precisa ser medida.
 
 ## Fronteiras de execução e limites conhecidos
 
@@ -188,9 +192,11 @@ e [lab/README.md](../../lab/README.md).
 
 No ambiente sintético, não se abre captura real nem conexão com a Vítima. O
 [Compose](../../docker-compose.yml) proposto roda localmente no Docker Desktop;
-[Dockerfile](../../Dockerfile) não comprova publicação em Cloud Run. Migração em
-Postgres real, build/execução da imagem, deploy cloud e browser/VMs ainda dependem
-de validação. Operação atual exige um worker/uma instância por ambiente.
+[Dockerfile](../../Dockerfile) não comprova publicação em nuvem. Build, execução
+da imagem e migração em Postgres de container passaram na CI pública. Deploy,
+Postgres gerenciado e browser/VMs ainda dependem de validação. Operação atual
+exige um worker/uma instância por ambiente. Render + Supabase substituem a
+previsão de Cloud Run para a entrega acadêmica; ver ADR 0012 e docs/closure/cloud.md.
 
 [ADR 0006](../decisions/0006-duplicacao-da-verificacao-de-evidencia.md) registra a
 regra de evidência duplicada em Python e JavaScript: a emenda 0.7.0 rejeita o

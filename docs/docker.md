@@ -73,7 +73,7 @@ Não foi acrescentada uma flag que desabilita Secure na nuvem. No laboratório
 Host-only real permanece a exceção Secure=False já aprovada para APP_MODE=lab.
 Se o navegador não preservar a sessão em localhost, verificar cookies/políticas
 nesse navegador; acesso por outro hostname/IP em HTTP não é o fluxo suportado.
-Publicação externa/Cloud Run continua exigindo HTTPS.
+Publicação externa continua exigindo HTTPS, inclusive no Render escolhido (ADR 0012).
 
 O dashboard identificará **NUVEM · DADOS SINTÉTICOS**, porque usa a mesma fonte e
 modo do deploy cloud; neste Compose, tudo está rodando localmente no notebook.
@@ -114,16 +114,13 @@ Compose/Postgres, verifica HTTP e consulta alembic_version. Seu smoke HTTP usa
 cookie explícito para testar API/CSRF; não valida políticas de cookies no browser.
 O encerramento desse job remove somente o volume efêmero usado no runner de CI.
 
-## Verificação feita nesta entrega
+## Verificação e alcance atualizados em 28/09/2026
 
-101 testes Python e 9 testes JS passaram, além de Ruff e build do frontend.
-YAML foi lido e a sintaxe do script shell conferida. **Docker/Compose e socket do
-daemon não estão disponíveis neste ambiente:** não foi executado docker build,
-Compose, o smoke de container, Postgres real ou navegador Windows nesta entrega.
-O job foi escrito, mas ainda depende de execução no GitHub. Não registrar essas
-etapas como aprovadas até rodarem no Docker Desktop ou no CI.
+A base auditada passou em 148 testes Python do MVP, 18 da otimização e 14 JS,
+além de Ruff/build. A [CI pública](https://github.com/dantas-eng/netsentinel/actions/runs/35897359835)
+executou Docker/Compose, smoke HTTP e migração em Postgres real de container.
+Essa execução não certifica o navegador Windows nem o Postgres gerenciado.
 
-Dockerfile e Compose adiantam containerização, mas não equivalem a deploy em
-nuvem concluído: Cloud Run, Postgres gerenciado e pipeline de publicação continuam
-pendentes. O Compose sintético não é configuração de rede para o ataque real nas
-VMs. Não conectar esse ambiente ao segmento isolado do laboratório.
+Deploy e CD para Render + Supabase: [guia cloud](closure/cloud.md). O CD está
+preparado, mas ainda não foi executado contra uma conta real nesta entrega.
+O Compose não representa a rede das VMs: nunca conectá-lo ao laboratório isolado.

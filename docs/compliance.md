@@ -14,27 +14,29 @@ Os PDFs oficiais prevalecem sobre o guia interno e esta interpretação operacio
 Um arquivo comprova implementação ou intenção documentada; um teste offline
 comprova somente o comportamento exercitado no seu ambiente. Código de teste
 escrito para Docker/Postgres não comprova que esse teste já tenha sido executado.
-Nesta auditoria, o repositório GitHub, a tag `v0.7.0`, o PR #3, a revisão e a execução
-dos checks de CI foram comprovados. A proteção da branch ainda não foi comprovada.
-A validação local da extensão de otimização está em `research/VALIDATION.md`;
-Docker, Postgres real, VMs, tráfego real e deploy em nuvem continuam dependendo de
-evidência de execução correspondente.
+Em 28/09/2026 foram conferidos o repositório público, os PRs #3/#4 com revisão
+entre integrantes, a tag v0.7.0, a proteção da main com três checks obrigatórios e
+a [CI da main](https://github.com/dantas-eng/netsentinel/actions/runs/35897359835).
+Essa CI executou container, smoke HTTP e migração em Postgres real. A tag v0.7.0
+antecede o merge da otimização; para reproduzir a auditoria, usar commit 692a414.
+A extensão offline está em research/VALIDATION.md. VMs e deploy gerenciado não
+foram comprovados. Guias de fechamento: [docs/closure](closure/README.md).
 
 ## Visão geral
 
 | # | Requisito NEXUS | Situação documentada |
 | --- | --- | --- |
-| 1 | Open Source Contribution & Collaboration | **Parcialmente comprovado** — repositório GitHub, licença, documentação, tag v0.7.0, PR real, revisão e execução de CI já comprovados; proteção da branch ainda não comprovada. |
+| 1 | Open Source Contribution & Collaboration | **Comprovado nas evidências consultadas** — repositório público, licença, documentação, versionamento e PRs revisados por outro integrante; CI e proteção da main verificadas. |
 | 2 | Telecommunications & Network Security | **Código pronto, validação pendente** — ensaio completo nas quatro VMs. |
-| 3 | Computational Intelligence & Algorithm Optimization | **Implementado e verificado offline** — classificador fuzzy operacional mantido; extensão GA/NSGA-II validada por testes e experimento reprodutível; tráfego real, VMs e aceitação da trilha ainda pendentes. |
+| 3 | Computational Intelligence & Algorithm Optimization | **Implementado e verificado offline** — classificador fuzzy operacional mantido; extensão GA/NSGA-II validada por testes e experimento reprodutível; trilha própria aprovada pelo professor conforme resposta fornecida pelo grupo; validação em tráfego real/VMs ainda pendente. |
 | 4 | Software Architecture & Design Patterns | Arquitetura documentada, com Observer, Strategy e Repository aplicados e justificados. |
-| 5 | Cloud Computing for Software Development | **Parcialmente comprovado** — workflow de CI disponível e execução em PR comprovada; deploy em nuvem e fluxo de CD ainda pendentes. |
+| 5 | Cloud Computing for Software Development | **Código/configuração preparados, validação cloud pendente** — CI executada; CD Render + Supabase implementado e ainda desativado até configurar contas. Serviço público e execução real do CD ainda não comprovados. |
 
 ## 1. Open Source Contribution & Collaboration
 
-**Situação: parcialmente comprovado.** O repositório está publicado no GitHub e
-já existe evidência de versionamento, documentação, tag, pull request revisado e
-execução da CI. A proteção da branch ainda não foi comprovada nesta auditoria.
+**Situação: comprovado nas evidências consultadas.** Repositório público,
+versionamento e PRs reais com revisão de outro integrante. A main está protegida
+com os três checks existentes; detalhes de bypass não foram auditados.
 
 **Exigência:** projeto publicado com licença aberta, README, CONTRIBUTING.md e pelo
 menos um ciclo real de pull request revisado entre integrantes. O roteiro também
@@ -52,14 +54,15 @@ menciona versionamento semântico nas práticas do projeto.
 | Checks do PR #3 | Execução remota da CI associada ao pull request, com os três checks concluídos com sucesso. |
 | [Licenças dos assets](../src/netsentinel/api/static/vendor/licenses/) | Avisos dos componentes de terceiros distribuídos com o dashboard offline. |
 
-**Limites:** a proteção da branch `main` não foi comprovada nesta auditoria.
-A existência da configuração de CI e a execução da CI no PR comprovam o fluxo de
-integração contínua exercitado, mas não comprovam proteção de branch nem práticas
-que não tenham evidência correspondente.
+**Evidência adicional:** [PR #4](https://github.com/dantas-eng/netsentinel/pull/4),
+por Igorfalvess e aprovado por dantas-eng, e sua
+[CI final](https://github.com/dantas-eng/netsentinel/actions/runs/35891131907).
+O [PR #3](https://github.com/dantas-eng/netsentinel/pull/3) apresenta a mesma
+separação entre autoria e revisão. Conservar os links na apresentação.
 
-**Para fechar:** registrar evidência verificável da proteção da branch, caso ela
-seja exigida para a entrega. Conservar URL do repositório, tag, PR, revisão e
-checks associados ao ciclo real.
+**Para fechar a entrega:** criar a versão final somente após estabilização e
+antes da avaliação, vinculada ao commit efetivamente demonstrado. Não refazer
+PRs artificiais nem tratar tag antiga como se incluísse alterações posteriores.
 
 ## 2. Telecommunications & Network Security
 
@@ -128,7 +131,7 @@ visual e o funcionamento do nftables no kernel continuam pendentes.
 
 **Resultados documentados:** no split sintético reservado, o baseline manual apresentou F1 de 0.4950; GA apresentou F1 médio de 0.6406 e NSGA-II de 0.6321. Esses números descrevem este experimento e não constituem garantia de superioridade em tráfego real. As métricas incluem precisão, recall, F1 e FPR, com abstenções tratadas separadamente e sem remoção do denominador.
 
-**Limites:** o corpus é sintético e a validação foi offline. Não há ainda validação em tráfego real, ensaio completo nas VMs, adoção operacional dos parâmetros otimizados ou conclusão de eficácia de defesa em ambiente real. A aceitação da trilha pelo professor e os ensaios de VM permanecem pendentes. A antiga ADR 0010 é histórica e não deve ser usada como fonte do protocolo experimental atual.
+**Limites:** o corpus é sintético e a validação foi offline. Não há ainda validação em tráfego real, ensaio completo nas VMs, adoção operacional dos parâmetros otimizados ou conclusão de eficácia de defesa em ambiente real. A trilha própria foi aprovada pelo professor; isso não substitui o ensaio das VMs. A antiga ADR 0010 é histórica e não deve ser usada como fonte do protocolo experimental atual.
 
 **Base operacional relacionada:** [analysis/features.py](../src/netsentinel/analysis/features.py), [fuzzy/membership.py](../src/netsentinel/analysis/fuzzy/membership.py), [fuzzy/rules.py](../src/netsentinel/analysis/fuzzy/rules.py), [fuzzy/engine.py](../src/netsentinel/analysis/fuzzy/engine.py) e [services/pipeline.py](../src/netsentinel/services/pipeline.py) permanecem como a implementação operacional do classificador fuzzy 0.7.0.
 
@@ -160,27 +163,24 @@ usado, suas limitações e como a composição ocorre, não apenas citar os nome
 
 ## 5. Cloud Computing for Software Development
 
-**Situação: parcialmente comprovado.** O workflow de CI está versionado e houve
-execução real associada ao PR #3. O deploy em nuvem e o fluxo de CD ainda não foram
-comprovados nesta auditoria.
+**Situação: código/configuração preparados, validação cloud pendente.** O deploy
+em nuvem e o fluxo CI/CD são obrigatórios no roteiro. O provedor foi alterado
+para Render Free + Supabase Free por escolha do grupo (ADR 0012).
 
-**Exigência:** desenvolvimento com serviços de nuvem e integração/entrega contínua
-automatizada, conforme o requisito NEXUS.
-
-| Evidência concreta | O que demonstra |
+| Evidência concreta | Alcance |
 | --- | --- |
-| [.github/workflows/ci.yml](../.github/workflows/ci.yml) | Workflow versionado com gatilhos para pull request, push na `main` e execução manual. |
-| Checks do PR #3 | Execução remota da CI associada a um pull request real, com os três checks concluídos com sucesso. |
-| [docker-compose.yml](../docker-compose.yml) | Ambiente local com aplicação e Postgres para validação integrada. |
-| [tests/container_smoke.py](../tests/container_smoke.py) | Teste HTTP sobre o Compose, com sessão/CSRF e dados sintéticos. |
+| [.github/workflows/ci.yml](../.github/workflows/ci.yml) | Lint/testes por PR; CD depende dos três jobs, main e ativação explícita |
+| [CI main 692a414](https://github.com/dantas-eng/netsentinel/actions/runs/35897359835) | Build/execução da imagem, HTTP/sessão e revisão Alembic em Postgres real de container |
+| [render.yaml](../render.yaml), [Dockerfile](../Dockerfile) | Serviço Free, mesma imagem, APP_MODE=cloud, sem LAB_CONFIG; não comprovam publicação |
+| [render_deploy.py](../tools/render_deploy.py) | Publica SHA testado, verifica status live e commit; ainda sem execução contra a API real |
+| [cloud_smoke.py](../tools/cloud_smoke.py) | HTTPS, sessão/CSRF, endpoints e fonte sintética; não certifica browser/Socket.IO |
+| [Guia cloud](closure/cloud.md) | Criação gratuita, banco, ativação de CD, validação, limites e manutenção |
 
-**Limites:** a existência do workflow e a execução do PR comprovam CI exercitada,
-mas não comprovam deploy em provedor de nuvem, fluxo de CD, Postgres gerenciado ou
-execução do ambiente em VMs.
+**Para fechar:** guardar URL HTTPS, commit, execução real do job de CD, revisão
+Alembic do banco gerenciado e evidência de login/dashboard no navegador. Testes
+mockados do cliente de deploy não substituem essas execuções. Migração em Postgres
+local/CI não deve ser confundida com validação em Supabase.
 
-**Para fechar:** registrar evidência do deploy em nuvem e do fluxo de CD, caso
-esses itens sejam exigidos para a entrega, além de conservar os resultados dos
-ensaios de container/Postgres quando executados no ambiente correspondente.
 ## Condição de atualização deste mapa
 
 Trocar o estado de um requisito somente após anexar referência verificável à sua

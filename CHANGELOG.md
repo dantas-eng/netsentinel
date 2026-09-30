@@ -3,6 +3,17 @@
 Versionamento semântico. As entregas anteriores à 0.4.0 cobriram captura,
 normalização, janela móvel e o motor fuzzy.
 
+## Não lançado — preparação de fechamento (28/09/2026)
+
+- Render Free + Supabase Free escolhidos pelo grupo (ADR 0012); especificação
+  render.yaml e CD condicionado aos três checks, à main e à ativação explícita.
+- Cliente de deploy fixa SHA, aguarda live e verifica o commit. Smoke HTTPS
+  confirma CSRF/sessão, REST e avanço da fonte sintética.
+- Onze testes offline da entrega cloud; nenhum deploy real executado nesta etapa.
+- Guias de execução por etapa, ficha de evidências, pitch e sabatina.
+- Documentação atualizada com PRs/CI existentes e aprovação da trilha própria.
+- Núcleo operacional e resultados/hiperparâmetros de otimização preservados.
+
 ## 0.7.0
 
 - `SecurityIdentity` e `trusted_bindings()` separam o inventário confiável da autorização de mitigação.

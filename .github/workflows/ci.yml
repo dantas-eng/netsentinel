@@ -11,7 +11,9 @@ permissions:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Um deploy aceito pelo provedor continua mesmo se o runner for cancelado.
+  # Serializar main evita abandonar o monitoramento de uma publicação ativa.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   quality:
@@ -134,3 +136,58 @@ jobs:
       - name: Encerrar ambiente efêmero
         if: always()
         run: docker compose --env-file .env.docker down --volumes
+
+  deploy:
+    name: Deploy acadêmico Render
+    needs: [quality, frontend, container]
+    # Em PR não há acesso às credenciais. Criar a variável somente após o setup.
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.event_name != 'pull_request' &&
+      vars.RENDER_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: academic-cloud
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Conferir configuração antes de publicar
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ vars.RENDER_SERVICE_ID }}
+          CLOUD_URL: ${{ vars.CLOUD_URL }}
+          CLOUD_OPERATOR_USERNAME: ${{ vars.CLOUD_OPERATOR_USERNAME }}
+          CLOUD_OPERATOR_PASSWORD: ${{ secrets.CLOUD_OPERATOR_PASSWORD }}
+        run: |
+          python - <<'PYCONFIG'
+          import os
+          from tools.cloud_smoke import validate_url
+          names = ('RENDER_API_KEY', 'RENDER_SERVICE_ID', 'CLOUD_URL',
+                   'CLOUD_OPERATOR_USERNAME', 'CLOUD_OPERATOR_PASSWORD')
+          missing = [name for name in names if not os.environ.get(name)]
+          if missing:
+              raise SystemExit('Configuração ausente: ' + ', '.join(missing))
+          validate_url(os.environ['CLOUD_URL'])
+          PYCONFIG
+      - name: Publicar o commit aprovado e aguardar live
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ vars.RENDER_SERVICE_ID }}
+          DEPLOY_SHA: ${{ github.sha }}
+        run: python tools/render_deploy.py
+      - name: Verificar HTTPS e sessão na nuvem
+        env:
+          CLOUD_URL: ${{ vars.CLOUD_URL }}
+          CLOUD_OPERATOR_USERNAME: ${{ vars.CLOUD_OPERATOR_USERNAME }}
+          CLOUD_OPERATOR_PASSWORD: ${{ secrets.CLOUD_OPERATOR_PASSWORD }}
+        run: python tools/cloud_smoke.py
+      - name: Guardar evidência do deploy e do smoke aprovado
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloud-deploy-${{ github.sha }}
+          path: deploy-evidence.json
+          retention-days: 90
