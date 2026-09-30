@@ -30,14 +30,19 @@ recalculados usando as configurações escolhidas e o teste reservado.
 integrity.json registra a preservação dos 110 arquivos src/assets da base 0.7.0.
 Os 600 IDs, contextos originais, rótulos e splits foram mantidos; acrescentou-se
 mistura de opcodes com RNG separado. Os PCAPs e features derivados mudam como
-esperado. As duas comparações invalidadas foram conservadas byte a byte, com
-hashes de cada arquivo, sob historical-invalid/.
+esperado. Relatórios e avisos das duas comparações invalidadas foram conservados em
+historical-invalid/. PCAPs/resultados brutos históricos foram retirados do checkout
+no commit 7c88d5d; sua recuperação depende do histórico Git anterior.
 
 Nenhum hiperparâmetro de AG/NSGA-II foi alterado. São 20 sementes por método,
 população 40, 40 gerações, quatro genes; piso ratio fixo em 0,5. Os novos resultados
 não devem ser comparados numericamente aos históricos como se o corpus fosse o
 mesmo. A prevenção de degeneração não comprova generalização a redes reais.
 
-Não houve execução de VMs, Docker/Postgres real, CI remota ou deploy cloud.
-Não houve criação/publicação de repositório. A aplicação continua usando o fuzzy
-manual, e o aceite docente da trilha própria permanece pendente.
+Na execução original deste experimento não houve VMs ou deploy cloud.
+Atualização em 28/09/2026: repositório público e CI remota comprovados, inclusive
+container/Postgres real, no [run 35897359835](https://github.com/dantas-eng/netsentinel/actions/runs/35897359835).
+O professor aprovou a trilha própria conforme resposta de e-mail fornecida pelo grupo.
+A aplicação continua usando o fuzzy manual. VMs e Postgres gerenciado/deploy cloud
+ainda exigem validação. A auditoria não repetiu as 40 buscas; conferiu suas métricas
+armazenadas pela suíte de testes.

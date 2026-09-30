@@ -46,7 +46,7 @@ A tabela abaixo relaciona tópicos do projeto aos arquivos onde estão documenta
 ## Recorte desta entrega
 
 Já implementados e cobertos por teste offline: captura, motor fuzzy, backend,
-dashboard, agente de mitigação, ambiente Docker e configuração de CI ainda não publicada. O ensaio completo
+dashboard, agente de mitigação, ambiente Docker e CI pública já executada com sucesso. O ensaio completo
 nas quatro VMs (ping caindo e voltando, nftables no kernel) e o deploy em nuvem
 ainda não foram feitos. O mapa de evidências está em
 [docs/compliance.md](docs/compliance.md).
@@ -61,7 +61,8 @@ python3 -m venv .venv
 PYTHONPATH=src .venv/bin/python tests/run_offline.py
 ```
 
-Resultado esperado: `Ran 148 tests` e `OK`. No frontend, `cd frontend && npm ci && npm test` deve encerrar com `# pass 14`. O Compose com dados sintéticos está em [docs/docker.md](docs/docker.md). A captura no sensor e a montagem das VMs estão em [lab/README.md](lab/README.md).
+Resultado esperado: `Ran 159 tests` e `OK` (148 do MVP + 11 de entrega cloud).
+A suíte opcional de otimização acrescenta 18 testes, conforme research/README.md. No frontend, `cd frontend && npm ci && npm test` deve encerrar com `# pass 14`. O Compose com dados sintéticos está em [docs/docker.md](docs/docker.md). A captura no sensor e a montagem das VMs estão em [lab/README.md](lab/README.md).
 
 ## Licença
 
@@ -70,9 +71,11 @@ MIT. Ver [LICENSE](LICENSE). Fluxo de contribuição em
 
 ## Integração local 0.7.0 + otimização
 
-Entrega consolidada por arquivos, sem histórico Git ou repositório remoto existente.
-A versão operacional permanece 0.7.0; nenhuma tag Git é afirmada. Publicação e
-primeiro commit serão realizados pelo grupo. O módulo opcional `optimization/`
+A integração já está na `main` do [repositório público](https://github.com/dantas-eng/netsentinel),
+pelos PRs [#3](https://github.com/dantas-eng/netsentinel/pull/3) e
+[#4](https://github.com/dantas-eng/netsentinel/pull/4), revisados por outro integrante.
+A versão declarada permanece 0.7.0; a tag v0.7.0 antecede o merge da otimização.
+O módulo opcional `optimization/`
 usa o baseline manual desta versão e quatro genes; veja
 [ADR 0010](docs/decisions/0010-integracao-070-otimizacao.md),
 [reprodução](research/README.md) e [validação](research/VALIDATION.md).
@@ -81,3 +84,10 @@ A comparação experimental vigente usa corpus ARP v2 com requests/replies varia
 As duas tentativas anteriores são inválidas para comparação atual e ficam em
 `research/historical-invalid/`. Consulte a
 [ADR 0011](docs/decisions/0011-corpus-arp-variavel-e-validade-experimental.md).
+
+## Fechamento da entrega
+
+Siga [o guia por etapas](docs/closure/README.md). O deploy acadêmico escolhido é
+Render Free + Supabase Free, com o mesmo Dockerfile e fonte sintética. Configuração
+e CD estão preparados; publicação e validação dependem das contas do grupo.
+Os planos têm limites e suspensão por inatividade, não disponibilidade garantida.

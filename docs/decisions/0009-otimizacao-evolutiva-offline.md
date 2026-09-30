@@ -1,7 +1,8 @@
 # ADR 0009 — Otimização evolutiva offline do classificador fuzzy
 
 - Data: 19/09/2026.
-- Status: implementação autorizada pelo grupo; aceite da trilha própria pendente do professor.
+- Status inicial (19/09): implementação autorizada pelo grupo; aceite docente então pendente.
+- Status atual: trilha aprovada; ver atualização de 28/09 ao final.
 - Escopo: extensão da disciplina Computational Intelligence & Algorithm Optimization.
 
 ## Contexto
@@ -101,3 +102,10 @@ Este documento era ADR 0008 no ramo de otimização derivado da 0.6.0. Renumerad
 para 0009 porque a base 0.7.0 já usa 0008 para detecção ampla/mitigação restrita.
 O protocolo original acima é histórico. A adaptação à quinta entrada fixa e a
 comparação atual são descritas na ADR 0010.
+
+## Atualização de status — 28/09/2026
+
+O grupo forneceu a resposta do professor aprovando expressamente a trilha própria
+NetSentinel. O aceite docente deixou de ser pendência. Este registro não altera
+o protocolo, os resultados nem o status pendente do ensaio das VMs e deploy.
+A data acima identifica o registro, não uma data presumida do e-mail.

@@ -1,14 +1,14 @@
 # Evidências de apresentação
 
-Material visual para banca e roteiro. Este diretório não substitui o ensaio
-nem o deploy: guarda o que for capturado quando essas etapas existirem.
+Roteiro de pitch e perguntas para todos: [preparação](../closure/presentation.md).
+Ficha para registrar execução: [evidence-template.md](../closure/evidence-template.md).
 
-Mapeamento dos blocos **Para fechar:** de [docs/compliance.md](../compliance.md):
+| Requisito | Evidência existente | Ainda falta |
+|---|---|---|
+| 1 — Open source | Repositório público, PRs [#3](https://github.com/dantas-eng/netsentinel/pull/3)/[#4](https://github.com/dantas-eng/netsentinel/pull/4), revisão por outro integrante e CI | Identificar a versão final demonstrada |
+| 2 — Segurança | Código e testes offline | Ensaio real: ping, Host-only, ARP, nftables e deltas |
+| 3 — Inteligência | [Relatório vigente](../../research/results/report.md), Pareto, 20 sementes/método e aprovação da trilha | Preparar explicação oral de modelo/protocolo/limitações |
+| 5 — Cloud | [CI pública](https://github.com/dantas-eng/netsentinel/actions/runs/35897359835) com container/Postgres; CD preparado | URL HTTPS, execução real de CD, banco gerenciado e navegador |
 
-| Requisito | O que depositar aqui | Ainda não existe |
-| --- | --- | --- |
-| 1 — Open source | Repositório, tag/commit e PR revisado por integrante distinto | Publicação ainda pendente; não existe evidência de repositório, tag, CI remota ou PR. |
-| 2 — Telecom e segurança | Screenshots de ping caindo/voltando, dashboard Host-only, nftables na Vítima | Ensaio nas quatro VMs |
-| 5 — Cloud | Screenshot do serviço HTTPS e da Actions ligada a PR | Actions ligada ao PR #1 verde (link acima) · **deploy em nuvem pendente** |
-
-Não colocar senha, token, `.env` ou hash de credencial.
+Não publicar senha, token, `.env`, cookies ou hash de credencial. Não marcar
+ensaio/deploy como aprovado apenas porque existe roteiro ou código para executá-lo.

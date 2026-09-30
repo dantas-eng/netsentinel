@@ -83,3 +83,10 @@ O runner exige manifesto v2, diagnóstico de variação de ratio e requests,
 sensibilidade de frequência/desvio e ativação de R5 antes de qualquer avaliação
 comparativa. Não há piso mínimo de F1 nem promessa de melhoria. As verificações
 não substituem representatividade em rede real, ensaio das VMs ou aceite docente.
+
+## Atualização de status — 28/09/2026
+
+O grupo forneceu a resposta do professor aprovando expressamente a trilha própria
+NetSentinel. O aceite docente deixou de ser pendência. Este registro não altera
+o protocolo, os resultados nem o status pendente do ensaio das VMs e deploy.
+A data acima identifica o registro, não uma data presumida do e-mail.
