@@ -56,28 +56,35 @@ export class EventFeed {
 
 export function riskStyle(risk) {
   // O frontend apresenta o julgamento do motor; não calcula outro score.
-  if (!risk || risk.score === null || risk.score === undefined) return {label: 'Sem avaliação', css: '', color: '#a8bbd1'};
-  const styles = {confiável: {css: 'safe', color: '#79e0b4'},
-    desconhecido: {css: 'unknown', color: '#f0d288'}, suspeito: {css: 'danger', color: '#ffa4b4'}};
-  return {label: risk.classification || 'Sem classificação', ...(styles[risk.classification] || {css: '', color: '#a8bbd1'})};
+  if (!risk || risk.score === null || risk.score === undefined) return {label: 'Sem avaliação', css: '', color: '#94a6c0'};
+  const styles = {confiável: {css: 'safe', color: '#34d399'},
+    desconhecido: {css: 'unknown', color: '#fbbf24'}, suspeito: {css: 'danger', color: '#fb7185'}};
+  return {label: risk.classification || 'Sem classificação', ...(styles[risk.classification] || {css: '', color: '#94a6c0'})};
 }
 
 export function graphData(topology) {
   const nodes = new Map(topology.nodes.map(device => {
     const risk = riskStyle(device.risk);
-    return [device.mac, {id: device.mac, label: `${device.mac}\n${risk.label}`,
-      shape: 'dot', color: {background: '#172c40', border: risk.color}, size: 23,
-      font: {color: '#edf4fc', size: 14}, borderWidth: 2}];
+    const score = Number.isFinite(device.risk?.score) ? ` · ${Math.round(device.risk.score)}` : '';
+    return [device.mac, {id: device.mac, label: `${device.mac}\n${risk.label}${score}`,
+      title: `${device.mac}\n${risk.label}${score}`, shape: 'dot', size: 16, borderWidth: 3,
+      color: {background: risk.color, border: '#070b14', highlight: {background: risk.color, border: '#e8eef8'},
+        hover: {background: risk.color, border: '#e8eef8'}},
+      shadow: {enabled: true, color: risk.color, size: risk.css === 'danger' ? 28 : 14, x: 0, y: 0},
+      font: {color: '#c7d4e8', size: 11, face: 'ui-monospace, Consolas, monospace', vadjust: 4, multi: false}}];
   }));
   const edges = topology.links.map(link => {
     for (const mac of [link.source, link.target]) {
       if (!nodes.has(mac)) nodes.set(mac, {id: mac,
         label: `${mac}\n${mac === 'ff:ff:ff:ff:ff:ff' ? 'Broadcast' : 'Destino observado'}`,
-        shape: 'box', color: '#26394f', font: {color: '#a8bbd1', size: 14}});
+        shape: 'box', margin: 8, color: {background: '#131c2c', border: '#34486a'},
+        shapeProperties: {borderRadius: 6}, font: {color: '#94a6c0', size: 11, face: 'ui-monospace, Consolas, monospace'}});
     }
     return {id: `${link.source}>${link.target}`, from: link.source, to: link.target,
-      label: `${link.packets} pac.`, arrows: 'to', color: {color: '#6586a1'},
-      font: {color: '#b9cee1', size: 12, strokeWidth: 0}, smooth: {type: 'continuous'}};
+      label: `${link.packets} pac.`, arrows: {to: {enabled: true, scaleFactor: .6}},
+      color: {color: '#3d5a80', highlight: '#22d3ee', hover: '#22d3ee'},
+      font: {color: '#94a6c0', size: 10, strokeWidth: 3, strokeColor: '#070b14', align: 'middle'},
+      smooth: {type: 'continuous'}};
   });
   return {nodes: [...nodes.values()], edges};
 }

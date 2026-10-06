@@ -4,22 +4,30 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Monitoramento de rede, classificação de risco e evidências de mitigação do NetSentinel.">
+  <meta name="theme-color" content="#070b14">
   <title>NetSentinel • Monitoramento de rede</title>
-  <link rel="icon" href="data:,">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5z' fill='%2322d3ee'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
   <script defer src="{{ url_for('static', filename='vendor/vis-network.min.js') }}"></script>
   <script defer src="{{ url_for('static', filename='vendor/socket.io.min.js') }}"></script>
   <script type="module" src="{{ url_for('static', filename='dashboard.mjs') }}"></script>
 </head>
 <body>
+  <svg width="0" height="0" class="sr-only" aria-hidden="true">
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2.5 4.5 5.3v5.9c0 4.7 3.2 8.9 7.5 10.3 4.3-1.4 7.5-5.6 7.5-10.3V5.3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m8.6 12 2.4 2.4 4.4-4.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-devices" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 20h8M12 16v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2.5 20h19z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 10v4.5M12 17.4v.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M3 12h4l2.5-6 4 12 2.5-6H21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </svg>
   <a class="skip" href="#main">Ir para o monitoramento</a>
-  <header class="masthead flex flex-wrap items-center justify-between gap-4">
-    <a class="brand" href="/" aria-label="NetSentinel, início"><span class="brand-mark" aria-hidden="true">N</span>Net<span>Sentinel</span></a>
-    <div class="flex flex-wrap items-center gap-4"><span class="eyebrow">MONITORAMENTO DE REDE</span><span id="mode" class="badge">Ambiente não consultado</span></div>
+  <header class="masthead">
+    <a class="brand" href="/" aria-label="NetSentinel, início"><svg class="brand-mark" aria-hidden="true"><use href="#i-shield"/></svg><span>Net</span><span class="brand-accent">Sentinel</span></a>
+    <div class="masthead-meta"><span class="eyebrow masthead-tag">MONITORAMENTO DE REDE</span><span id="mode" class="badge mode-badge">Ambiente não consultado</span></div>
   </header>
   <noscript><p class="notice">Ative JavaScript para acessar o monitoramento.</p></noscript>
   <main id="main">
     <section id="login-panel" class="login panel">
+      <svg class="login-mark" aria-hidden="true"><use href="#i-shield"/></svg>
       <span class="eyebrow">ACESSO DO OPERADOR</span>
       <h1>Entrar no NetSentinel</h1>
       <p class="muted">Use a credencial configurada para este ambiente.</p>
@@ -31,22 +39,25 @@
       <p id="login-message" class="muted" role="status" aria-live="polite">Verificando sessão…</p>
     </section>
     <div id="workspace" hidden>
-      <div class="toolbar flex flex-wrap items-center justify-between gap-4">
-        <div><span class="eyebrow">VISÃO DO SEGMENTO</span><h1>Monitoramento</h1></div>
-        <div class="flex flex-wrap items-center gap-3"><span id="operator" class="muted"></span><button id="refresh" type="button">Atualizar</button><button id="logout" type="button">Sair</button></div>
+      <div class="toolbar">
+        <div><span class="eyebrow">VISÃO DO SEGMENTO</span><h1>Centro de monitoramento</h1></div>
+        <div class="toolbar-actions"><span id="live" class="live" data-state="off"><span class="live-dot" aria-hidden="true"></span><span id="connection">Conectando…</span></span><span id="operator" class="muted operator"></span><button id="refresh" type="button">Atualizar</button><button id="logout" type="button">Sair</button></div>
       </div>
-      <div class="status-strip flex flex-wrap items-center gap-4" aria-label="Estado da coleta">
-        <span id="connection">Conectando…</span><span id="source-state">Fonte não consultada</span><span>Janela: <strong id="window">8 s</strong></span><span>Última captura: <strong id="last-snapshot">—</strong></span>
-      </div>
+      <section class="kpis" aria-label="Resumo do segmento">
+        <div class="kpi"><svg class="kpi-icon" aria-hidden="true"><use href="#i-devices"/></svg><span class="kpi-label">Dispositivos</span><strong id="kpi-devices" class="kpi-value">—</strong><span class="kpi-sub">no inventário persistido</span></div>
+        <div id="kpi-suspects-card" class="kpi" data-tone="neutral"><svg class="kpi-icon" aria-hidden="true"><use href="#i-alert"/></svg><span class="kpi-label">Suspeitos</span><strong id="kpi-suspects" class="kpi-value">—</strong><span class="kpi-sub">classificação fuzzy ≥ 65</span></div>
+        <div id="kpi-defense-card" class="kpi" data-tone="neutral"><svg class="kpi-icon" aria-hidden="true"><use href="#i-shield"/></svg><span class="kpi-label">Defesa na Vítima</span><strong id="kpi-defense" class="kpi-value kpi-text">Aguardando</strong><span id="kpi-defense-sub" class="kpi-sub">sem leitura do agente</span></div>
+        <div id="kpi-source-card" class="kpi" data-tone="neutral"><svg class="kpi-icon" aria-hidden="true"><use href="#i-pulse"/></svg><span class="kpi-label">Fonte de captura</span><strong id="source-state" class="kpi-value kpi-text">Não consultada</strong><span class="kpi-sub">Janela <strong id="window">8 s</strong> · última <strong id="last-snapshot">—</strong></span></div>
+      </section>
       <p id="feedback" class="notice" role="status" aria-live="polite" hidden></p>
       <p id="source-warning" class="notice warning" role="status" hidden></p>
       <div class="monitor-grid">
         <section class="panel topology-panel" aria-labelledby="topology-title">
-          <div class="panel-heading flex flex-wrap items-center justify-between gap-3"><div><span class="eyebrow">01 / CONEXÕES OBSERVADAS</span><h2 id="topology-title">Topologia</h2></div><button id="fit" type="button">Enquadrar grafo</button></div>
+          <div class="panel-heading"><div><span class="eyebrow">01 / CONEXÕES OBSERVADAS</span><h2 id="topology-title">Topologia</h2></div><button id="fit" type="button">Enquadrar grafo</button></div>
           <div class="graph-wrap"><div id="network" tabindex="0" role="region" aria-label="Grafo de conexões. Use também a tabela de dispositivos abaixo."></div><p id="graph-empty" class="graph-empty">Aguardando dispositivos observados.</p></div>
-          <div class="graph-footer"><div class="flex flex-wrap gap-3"><span class="badge safe">Confiável</span><span class="badge unknown">Desconhecido</span><span class="badge danger">Suspeito</span><span class="badge">Sem avaliação</span></div><p class="muted">Conexões Ethernet da última janela. Selecionar um nó abre seus detalhes. Uma ligação no grafo não comprova entrega após o firewall.</p></div>
+          <div class="graph-footer"><div class="legend"><span class="badge safe">Confiável</span><span class="badge unknown">Desconhecido</span><span class="badge danger">Suspeito</span><span class="badge">Sem avaliação</span></div><p class="muted">Conexões Ethernet da última janela. Selecionar um nó abre seus detalhes. Uma ligação no grafo não comprova entrega após o firewall.</p></div>
         </section>
-        <section class="panel evidence-panel" aria-labelledby="evidence-title">
+        <section id="evidence-panel" class="panel evidence-panel" data-state="pending" aria-labelledby="evidence-title">
           <span class="eyebrow">02 / DEFESA NA VÍTIMA</span><h2 id="evidence-title">Evidências de mitigação</h2>
           <p id="mitigation-state" class="evidence-state">Aguardando evidências</p>
           <p id="evidence-origin" class="muted">Nenhuma leitura do agente disponível.</p>
@@ -57,21 +68,21 @@
         </section>
       </div>
       <section class="panel devices-panel" aria-labelledby="devices-title">
-        <div class="panel-heading flex flex-wrap items-center justify-between gap-3"><div><span class="eyebrow">03 / INVENTÁRIO PERSISTIDO</span><h2 id="devices-title">Dispositivos <span id="device-count" class="muted"></span></h2></div><span class="muted">Risco fuzzy de 0 a 100 · maior = mais risco</span></div>
-        <div class="table-scroll"><table><thead><tr><th>Dispositivo / MAC</th><th>Reputação</th><th>Risco fuzzy</th><th>Baseline</th><th>Última observação</th><th><span class="sr-only">Ações</span></th></tr></thead><tbody id="devices"></tbody></table></div>
+        <div class="panel-heading"><div><span class="eyebrow">03 / INVENTÁRIO PERSISTIDO</span><h2 id="devices-title">Dispositivos <span id="device-count" class="muted"></span></h2></div><span class="muted scale-note">Risco fuzzy de 0 a 100 · limiares 35 e 65</span></div>
+        <div class="table-scroll"><table class="devices-table"><thead><tr><th>Dispositivo / MAC</th><th>Reputação</th><th>Risco fuzzy</th><th>Baseline</th><th>Última observação</th><th><span class="sr-only">Ações</span></th></tr></thead><tbody id="devices"></tbody></table></div>
         <p id="devices-empty" class="empty">Nenhum dispositivo registrado.</p>
         <p class="muted table-note">Reputação é reconhecimento manual. Não garante risco baixo. O risco exibido é a última avaliação persistida.</p>
       </section>
       <section class="panel history-panel" aria-labelledby="history-title">
-        <div class="panel-heading flex flex-wrap items-center justify-between gap-3"><div><span class="eyebrow">04 / HISTÓRICO</span><h2 id="history-title">Eventos e auditoria</h2></div><nav class="flex gap-2" aria-label="Histórico"><button id="show-events" aria-pressed="true">Eventos</button><button id="show-audit" aria-pressed="false">Auditoria</button></nav></div>
+        <div class="panel-heading"><div><span class="eyebrow">04 / HISTÓRICO</span><h2 id="history-title">Eventos e auditoria</h2></div><nav class="segmented" aria-label="Histórico"><button id="show-events" aria-pressed="true">Eventos</button><button id="show-audit" aria-pressed="false">Auditoria</button></nav></div>
         <div id="events-panel"><p id="history-note" class="muted">Carregando histórico…</p><ol id="events" class="timeline"></ol><p id="events-empty" class="empty">Nenhum evento registrado.</p></div>
         <div id="audit-panel" hidden><p class="muted">Até 100 registros mais recentes de confirmação, revogação e calibração.</p><ol id="audit" class="timeline"></ol><p id="audit-empty" class="empty">Nenhuma ação auditada.</p></div>
       </section>
-      <footer class="flex flex-wrap justify-between gap-3"><span>NetSentinel / ExpoTech 2026.2</span><span>Sensor passivo · classificação fuzzy · defesa na Vítima</span></footer>
+      <footer><span>NetSentinel / ExpoTech 2026.2</span><span>Sensor passivo · classificação fuzzy · defesa na Vítima</span></footer>
     </div>
   </main>
   <dialog id="device-dialog" aria-labelledby="detail-title">
-    <div class="flex items-start justify-between gap-4"><div><span class="eyebrow">DISPOSITIVO</span><h2 id="detail-title" class="mono"></h2></div><button id="close-detail" aria-label="Fechar detalhes">Fechar</button></div>
+    <div class="dialog-head"><div><span class="eyebrow">DISPOSITIVO</span><h2 id="detail-title" class="mono"></h2></div><button id="close-detail" aria-label="Fechar detalhes">Fechar</button></div>
     <div id="detail-data"></div>
     <section class="detail-section"><h3>Reconhecimento manual</h3><p id="reputation-help" class="muted"></p><form id="reputation-form" class="grid gap-3"><label>Motivo<textarea id="reputation-reason" required maxlength="500" rows="2" placeholder="Como você identificou este dispositivo?"></textarea></label><button id="reputation-submit" class="primary" type="submit">Confirmar dispositivo</button></form></section>
     <section class="detail-section"><h3>Baseline de volume</h3><p class="muted">Mediana de cinco janelas completas de 8 s, sem sobreposição e sem conflito ARP. O valor permanece congelado até nova calibração.</p><p id="calibration-state"></p><button id="calibrate" type="button" aria-describedby="calibrate-reason">Iniciar calibração</button><p id="calibrate-reason" class="muted" role="status" hidden></p></section>
