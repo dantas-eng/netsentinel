@@ -40,6 +40,7 @@ function endSession(text = '') {
   $('device-dialog').close(); $('workspace').hidden = true; $('login-panel').hidden = false;
   for (const id of ['devices', 'events', 'audit', 'detail-data']) $(id).replaceChildren();
   $('mode').textContent = 'Ambiente não consultado'; $('password').value = '';
+  $('live').dataset.state = 'off'; $('connection').textContent = 'Conectando…';
   message(text, 'login-message');
 }
 async function startSession(info) {
@@ -50,10 +51,10 @@ async function startSession(info) {
   if (!window.io || !window.vis) { message('Arquivos locais da interface não carregaram. Recarregue a página.'); return; }
   createGraph();
   socket = window.io({autoConnect: false, transports: ['websocket'], auth: {csrf_token: api.csrf}});
-  socket.on('connect', () => { if (version !== epoch) return; $('connection').textContent = 'Eventos conectados'; scheduleRefresh(); });
+  socket.on('connect', () => { if (version !== epoch) return; $('connection').textContent = 'Eventos ao vivo'; $('live').dataset.state = 'on'; scheduleRefresh(); });
   socket.on('disconnect', reason => {
     if (version !== epoch || !signedIn) return;
-    $('connection').textContent = 'Eventos desconectados · dados podem estar antigos';
+    $('connection').textContent = 'Eventos desconectados · dados podem estar antigos'; $('live').dataset.state = 'off';
     // Logout/expiração no servidor desconecta sem reconexão automática.
     if (reason === 'io server disconnect') {
       api.request('/api/auth/session').then(() => { if (version === epoch) socket?.connect(); }).catch(e => fail(e));
@@ -61,7 +62,7 @@ async function startSession(info) {
   });
   socket.on('connect_error', () => {
     if (version !== epoch) return;
-    $('connection').textContent = 'Falha na conexão de eventos';
+    $('connection').textContent = 'Falha na conexão de eventos'; $('live').dataset.state = 'error';
     // Detectar expiração; não mascarar falha como atualização em tempo real.
     api.request('/api/auth/session').catch(e => { if (version === epoch) fail(e); });
   });
@@ -113,12 +114,17 @@ async function synchronize() {
 function createGraph() {
   graphNodes = new window.vis.DataSet(); graphEdges = new window.vis.DataSet();
   graph = new window.vis.Network($('network'), {nodes: graphNodes, edges: graphEdges}, {
-    locale: 'pt-br', layout: {randomSeed: 42}, physics: {stabilization: {iterations: 100}},
-    interaction: {hover: true, keyboard: {enabled: true, bindToWindow: false}},
-    edges: {width: 1.5}, nodes: {chosen: true}, manipulation: false
+    locale: 'pt-br', layout: {randomSeed: 42},
+    // Repulsão maior evita rótulos sobrepostos com poucos nós próximos.
+    physics: {solver: 'forceAtlas2Based', forceAtlas2Based: {gravitationalConstant: -110, springLength: 150, avoidOverlap: 1},
+      stabilization: {iterations: 150}},
+    interaction: {hover: true, tooltipDelay: 120, keyboard: {enabled: true, bindToWindow: false}},
+    edges: {width: 1.6, selectionWidth: 1.2}, nodes: {chosen: true}, manipulation: false
   });
   graph.on('selectNode', ({nodes}) => { if (devices.some(d => d.mac === nodes[0])) openDetails(nodes[0]); });
-  graph.on('stabilizationIterationsDone', () => graph?.setOptions({physics: false}));
+  // Novo nó reativa a física; ao assentar, desliga e reenquadra para não cortar nós em telas estreitas.
+  const settle = () => { graph?.setOptions({physics: false}); graph?.fit({animation: false}); };
+  graph.on('stabilizationIterationsDone', settle); graph.on('stabilized', settle);
 }
 function reconcile(dataset, incoming) {
   const ids = new Set(incoming.map(item => item.id));
@@ -137,7 +143,8 @@ function updateGraph() {
 function renderStatus() {
   if (!status) return;
   $('mode').textContent = status.mode === 'cloud' ? 'NUVEM · DADOS SINTÉTICOS' : 'LABORATÓRIO · REDE ISOLADA';
-  $('source-state').textContent = status.source_running ? 'Fonte em execução' : 'Fonte parada';
+  $('source-state').textContent = status.source_error ? 'Parada por erro' : status.source_running ? 'Em execução' : 'Parada';
+  $('kpi-source-card').dataset.tone = status.source_error ? 'danger' : status.source_running ? 'safe' : 'warn';
   $('window').textContent = `${status.window_seconds} s`;
   const ts = status.last_snapshot_at;
   $('last-snapshot').textContent = when(ts);
@@ -152,23 +159,35 @@ function renderStatus() {
 }
 function renderDevices() {
   const rows = devices.map(d => {
-    const tr = node('tr'); tr.append(node('td', d.mac, 'mono'), node('td', reputations[d.reputation] || 'Sem informação'));
-    const risk = node('td'), style = riskStyle(d.risk);
-    risk.append(node('span', fmt(d.risk?.score), 'score'), badge(style.label, style.css));
-    tr.append(risk, node('td', d.baseline_bps === null ? 'Indisponível' : `${fmt(d.baseline_bps)} bytes/s`), node('td', when(d.last_seen)));
+    const style = riskStyle(d.risk), tr = node('tr', undefined, style.css === 'danger' ? 'is-suspect' : '');
+    const cell = (label, text, cls) => { const td = node('td', text, cls); td.dataset.label = label; return td; };
+    tr.append(cell('Dispositivo', d.mac, 'mono'), cell('Reputação', reputations[d.reputation] || 'Sem informação'));
+    const risk = cell('Risco fuzzy'), wrap = node('div', undefined, 'risk-cell'), bar = node('span', undefined, 'risk-bar'), fill = node('span', undefined, `risk-fill ${style.css}`);
+    // Barra apenas desenha o score persistido; limiares 35/65 são marcas visuais fixas.
+    fill.style.setProperty('--v', `${Number.isFinite(d.risk?.score) ? Math.max(0, Math.min(100, d.risk.score)) : 0}%`);
+    bar.append(fill); wrap.append(node('span', fmt(d.risk?.score), 'score'), bar, badge(style.label, style.css)); risk.append(wrap);
+    tr.append(risk, cell('Baseline', d.baseline_bps === null ? 'Indisponível' : `${fmt(d.baseline_bps)} bytes/s`), cell('Última observação', when(d.last_seen)));
     const action = node('td'), button = node('button', 'Detalhes'); button.type = 'button';
     button.setAttribute('aria-label', `Detalhes de ${d.mac}`); button.addEventListener('click', () => openDetails(d.mac));
     action.append(button); tr.append(action); return tr;
   });
   $('devices').replaceChildren(...rows); $('devices-empty').hidden = rows.length > 0;
   $('device-count').textContent = `(${rows.length})`;
+  const suspects = devices.filter(d => riskStyle(d.risk).css === 'danger').length;
+  $('kpi-devices').textContent = String(rows.length); $('kpi-suspects').textContent = String(suspects);
+  $('kpi-suspects-card').dataset.tone = suspects ? 'danger' : rows.length ? 'safe' : 'neutral';
+}
+function eventKind(name) {
+  if (['mitigation_error', 'source_error', 'threat_unmitigable'].includes(name)) return 'alert';
+  if (name.startsWith('mitigation_')) return 'defense';
+  return {risk_evaluated: 'risk', snapshot_updated: 'capture'}[name] || 'admin';
 }
 function renderEvents() {
   const events = feed.newest();
   $('history-note').textContent = `Até 200 eventos mais recentes · ordem do registro, mais novo primeiro · cursor recuperado: ${feed.cursor}`;
   const expanded = new Set([...$('events').querySelectorAll('details[open]')].map(el => el.dataset.id));
   $('events').replaceChildren(...events.map(e => {
-    const li = node('li'); const time = node('time', when(e.timestamp)); time.dateTime = new Date(e.timestamp*1000).toISOString();
+    const li = node('li'); li.dataset.kind = eventKind(e.event); const time = node('time', when(e.timestamp)); time.dateTime = new Date(e.timestamp*1000).toISOString();
     const detail = node('details'), summary = node('summary', labels[e.event] || e.event);
     summary.append(document.createTextNode(' '), badge(e.source === 'synthetic' ? 'Sintético' : 'Laboratório', e.event.includes('error') ? 'danger' : ''));
     detail.dataset.id = String(e.event_id);
@@ -194,6 +213,11 @@ function renderEvidence() {
   $('mitigation-state').textContent = error ? 'Falha ao consultar ou aplicar defesa' : !after ? 'Aguardando evidências' :
     after.mitigated ? 'Mitigação reportada pelo agente' : 'Mitigação não confirmada';
   $('mitigation-state').className = `evidence-state ${error ? 'text-red-300' : ''}`;
+  const state = error ? 'error' : !after ? 'pending' : after.mitigated ? 'ok' : 'unconfirmed';
+  $('evidence-panel').dataset.state = state;
+  $('kpi-defense-card').dataset.tone = {error: 'danger', unconfirmed: 'danger', ok: 'safe', pending: 'neutral'}[state];
+  $('kpi-defense').textContent = {error: 'Falha', unconfirmed: 'Não confirmada', ok: 'Aplicada', pending: 'Aguardando'}[state];
+  $('kpi-defense-sub').textContent = !after ? 'sem leitura do agente' : after.simulated || afterEvent.source === 'synthetic' ? 'simulação · não comprova defesa real' : 'reportada pelo agente da Vítima';
   $('target-mac').textContent = after?.attacker_mac || '—';
   $('arp-state').textContent = after ? (after.arp_static_correct === true ? 'Confirmado na leitura' : 'Não confirmado') : 'Não verificado';
   $('block-state').textContent = after ? (after.blocked === true ? 'Confirmada na leitura' : 'Não confirmada') : 'Não verificada';

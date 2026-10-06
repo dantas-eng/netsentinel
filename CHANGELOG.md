@@ -3,6 +3,16 @@
 Versionamento semântico. As entregas anteriores à 0.4.0 cobriram captura,
 normalização, janela móvel e o motor fuzzy.
 
+## Não lançado — dashboard "centro de operações" (06/10/2026)
+
+- Visual redesenhado sem mudar API, contratos nem lógica: cartões de resumo
+  (dispositivos, suspeitos, defesa, fonte), indicador de eventos ao vivo, painel
+  de defesa com estado colorido e grafo maior com nós coloridos por risco.
+- Barra de risco 0–100 com marcas 35/65 desenhando apenas o score persistido.
+- Inventário vira cartões no celular; corrigida rolagem horizontal em 390 px.
+- Grafo reenquadra após assentar e usa repulsão maior: rótulos não se sobrepõem.
+- Continua offline (sem CDN/fontes externas), com textContent e avisos de simulação.
+
 ## Não lançado — preparação de fechamento (28/09/2026)
 
 - Render Free + Supabase Free escolhidos pelo grupo (ADR 0012); especificação

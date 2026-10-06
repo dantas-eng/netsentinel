@@ -17,6 +17,10 @@ exibidas; não são substituídas por dados de demonstração.
 
 ## Telas e contratos
 
+O topo mostra quatro cartões derivados só do que a API já devolve: total do
+inventário, quantidade com classificação `suspeito`, estado da última leitura de
+defesa (com aviso de simulação) e estado da fonte. Nenhum cartão calcula score.
+
 | Parte | Dados e comportamento |
 | --- | --- |
 | Topologia | `/api/topology`; vis.js Network com nós identificados por MAC, cores da classificação recebida e conexões Ethernet observadas. Destinos sem origem observada e broadcast não recebem reputação inventada. Seleção abre detalhes quando existe registro no inventário. |
