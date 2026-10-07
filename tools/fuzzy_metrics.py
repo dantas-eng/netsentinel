@@ -85,7 +85,10 @@ SCENARIOS = (
         {},
         "suspeito",
     ),
-    Scenario("no_arp_known", _snapshot(_device()), {"aa": Reputation.KNOWN}, {"aa": 100}, None),
+    # ADR 0013: dispositivo conhecido sem ARP tem conflito 0, frequência 0 (baixa) e
+    # desvio 0 (1000 B / 10 s = baseline); razão ausente é neutra, então R5 = 1.
+    # Antes (None) a razão ausente zerava a calma; agora é "confiável".
+    Scenario("no_arp_known", _snapshot(_device()), {"aa": Reputation.KNOWN}, {"aa": 100}, "confiável"),
     Scenario("incomplete_window", _snapshot(_device(replies=50), incomplete=True), {"aa": Reputation.NEW}, {}, None),
     Scenario("unknown_rep_high_freq", _flood(), {"aa": Reputation.UNKNOWN}, {}, None),
     Scenario("warming_up", _snapshot(_device(replies=50), warming_up=True), {"aa": Reputation.KNOWN}, {"aa": 100}, None),
