@@ -1,5 +1,22 @@
 # Validação do corpus v2 e correção experimental
 
+## Atualização — corpus v3 (ADR 0013, 07/10/2026)
+
+As regras R4/R5, o conflito e a amostra mínima da razão mudaram
+([ADR 0013](../docs/decisions/0013-classificacao-de-dispositivos-legitimos.md)),
+então o experimento foi refeito. O texto abaixo descreve a validação do corpus v2
+e é conservado como histórico das decisões da ADR 0011; os números vigentes são
+os desta seção e de `results/report.md`.
+
+- Corpus v3: mesmos 600 cenários, famílias, rótulos, splits (360/120/120) e
+  PCAPs byte a byte idênticos; apenas as entradas extraídas de 77 registros mudaram.
+- 20 sementes GA e 20 NSGA-II, população 40, 40 gerações, mesmo protocolo.
+- Teste reservado: manual F1 0,6389 (antes 0,4950); GA 0,6490 ± 0,0008 (antes
+  0,6406); NSGA-II 0,6400 (antes 0,6321). Margem sobre o manual: GA +0,0102,
+  NSGA-II +0,0011, com FPR maior e precisão menor. Sem alegação de superioridade.
+- Resultados anteriores arquivados em `historical-invalid/v070-pre-adr0013/`.
+- Não valida tráfego real, VMs nem generalização.
+
 ## Antes de qualquer comparação
 
 Os PCAPs foram regenerados com requests/replies reais. diagnostics.json foi obtido

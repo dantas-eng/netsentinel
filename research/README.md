@@ -36,6 +36,9 @@ nftables, Docker ou banco. Instalar DEAP permanece opcional para executar o MVP.
 - `results/results.json` e `metrics.csv`: 40 execuções, parâmetros e métricas.
 - `results/diagnostics.json`: distribuição de ratio, ativação e sensibilidade.
 - `results/dataset/dataset.json` e `pcaps/`: manifestos e 600 PCAPs sintéticos.
+- `historical-invalid/v070-pre-adr0013/`: modelo anterior à
+  [ADR 0013](../docs/decisions/0013-classificacao-de-dispositivos-legitimos.md)
+  (corpus v2; manual F1 0,4950, GA 0,6406, NSGA-II 0,6321). Substituído pelo v3.
 - `historical-invalid/v060/`: comparação anterior inválida para a avaliação atual;
   usa outro baseline e corpus. A 0.6.0 não tinha ratio nas regras.
 - `historical-invalid/v070-constant-ratio/`: comparação degenerada, invalidada;
@@ -46,6 +49,14 @@ e seus manifestos foram removidos do checkout no commit 7c88d5d; podem ser
 consultados no histórico Git anterior. Não afirmar que os PCAPs/manifestos antigos
 continuam neste diretório. O antigo empate não é evidência
 de equivalência entre algoritmos. Não misturar métricas de corpus/baselines diferentes.
+
+## Resultado com o modelo da ADR 0013
+
+No teste reservado (120 exemplos) o manual obtém F1 0,6389 (antes 0,4950),
+GA 0,6490 ± 0,0008 e NSGA-II 0,6400. A vantagem sobre o manual é marginal
+(GA +0,0102; NSGA-II +0,0011) e vem com FPR maior (0,1810 e 0,1786 contra 0,1548)
+e precisão menor (0,6202 e 0,6154 contra 0,6389). O ganho principal foi do
+modelo, não da otimização; não se afirma superioridade dos otimizadores.
 
 ## Dados sintéticos e rótulos
 

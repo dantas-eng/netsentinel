@@ -11,7 +11,7 @@ versão de 2min40s a 2min50s para manter margem, sem acelerar a fala.
 | 0:00–0:20 | Problema: ARP não autentica a associação IP/MAC; uma alegação falsa pode desviar e interromper tráfego local. Apresentar o NetSentinel. |
 | 0:20–0:45 | Mostrar as quatro VMs isoladas e o dashboard. Explicar Sensor passivo, Host-only para apresentação e agente de defesa na Vítima. |
 | 0:45–1:25 | Mostrar ping respondendo, envenenamento sem encaminhamento, detecção e defesa. Exibir ARP estático e deltas de descarte — não só recuperação do ping. |
-| 1:25–2:05 | Explicar fuzzy manual como baseline; AG/NSGA-II ajustam quatro parâmetros em 600 cenários sintéticos. Mostrar Pareto e média/DP de 20 sementes; redução de falsos positivos com perda de recall. |
+| 1:25–2:05 | Explicar fuzzy manual como baseline; AG/NSGA-II ajustam quatro parâmetros em 600 cenários sintéticos. Depois da ADR 0013 o manual subiu de F1 0,4950 para 0,6389; AG (0,6490) e NSGA-II (0,6400) ficam só 0,010 e 0,001 acima, trocando mais recall por mais falsos positivos e menor precisão. Mostrar Pareto e média/DP de 20 sementes sem afirmar superioridade. |
 | 2:05–2:30 | Mostrar PR revisado, CI/CD e URL HTTPS com dados sintéticos. Distinguir cloud da rede isolada real. |
 | 2:30–2:50 | Concluir com o que foi comprovado, limitações do dataset e o papel de cada padrão arquitetural; apresentar equipe e repositório. |
 
@@ -37,7 +37,9 @@ integrador; o limite de 3 minutos do regulamento continua valendo para a ExpoTec
 7. **Por que tcpdump ainda pode ver pacotes bloqueados?** O tap pode ocorrer
    antes do filtro; evidência usa deltas antes/depois do ponto de filtragem.
 8. **Como funciona Mamdani?** Pertinências, cinco regras, min/max, agregação e
-   centroide; ausência gera pertinência zero, não baixo risco inventado.
+   centroide; ausência gera pertinência zero, não baixo risco inventado. Em R4/R5,
+   desvio e razão ausentes são neutros (ADR 0013): conhecido calado é confiável,
+   mas conflito e frequência continuam obrigatórios.
 9. **NEW ou UNKNOWN?** MAC ausente após consulta válida é NEW; UNKNOWN indica
    falta real de informação/falha. Promoção a KNOWN é confirmação explícita.
 10. **Qual a unidade do baseline?** Bytes por segundo; mediana de cinco janelas
@@ -53,6 +55,9 @@ integrador; o limite de 3 minutos do regulamento continua valendo para a ExpoTec
     não transformam corpus sintético em evidência de generalização real.
 15. **O que havia de errado com ratio=1 constante?** Saturava a anomalia,
     mascarava genes e fechava regras. O corpus vigente contém requests/replies.
+    Com o modelo da ADR 0013 o manual chegou a F1 0,6389 e os otimizadores ficam
+    marginalmente acima (GA +0,010, NSGA-II +0,001), com FPR maior: não afirmar
+    que otimizar vence o manual.
 16. **O otimizado substitui o manual no dashboard?** Não. Compartilha Strategy,
     mas a comparação é offline e o pipeline operacional mantém o manual.
 17. **Onde estão Observer/Strategy/Repository?** EventBus/Socket.IO; contratos de
@@ -63,6 +68,11 @@ integrador; o limite de 3 minutos do regulamento continua valendo para a ExpoTec
     sintéticos; não comprova nftables ou ataque real. Não existe túnel para o lab.
 20. **Por que um worker/instância?** Fonte e barramento são locais ao processo;
     várias réplicas duplicariam produção e exigiriam coordenação adicional.
+21. **Por que o gateway não fica vermelho durante o ataque?** Ele alega o mesmo IP
+    que o Atacante, mas é reconhecido (KNOWN) e o Atacante não: pela ADR 0013 o
+    conflito daquele IP pesa só no não reconhecido. Sem sinal ruim, o gateway fica
+    confiável. Limite: se o atacante também fosse KNOWN, o conflito valeria para
+    os dois.
 
 ## Rodada de estudo
 
