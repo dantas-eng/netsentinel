@@ -12,6 +12,7 @@ from unittest.mock import patch
 import numpy as np
 
 from netsentinel.analysis.fuzzy.engine import infer
+from netsentinel.analysis.features import ARP_RATIO_MIN_PACKETS
 from netsentinel.analysis.models import RiskInputs
 from netsentinel.optimization.classifier import (
     ParameterizedFuzzyRiskStrategy, Parameters, memberships, scores,
@@ -102,8 +103,13 @@ class DatasetTests(unittest.TestCase):
             content, features = replay(record['config'])
             self.assertEqual(hashlib.sha256(content).hexdigest(), record['pcap_sha256'])
             self.assertEqual(features.arp_frequency, record['config']['arp_count']/8)
-            self.assertEqual(features.arp_reply_ratio,
-                             record['config']['arp_reply_count']/record['config']['arp_count'])
+            total = record['config']['arp_count']
+            if total < ARP_RATIO_MIN_PACKETS:
+                self.assertIsNone(features.arp_reply_ratio)
+                self.assertIn('arp_reply_ratio_insufficient_sample', features.missing_reasons)
+            else:
+                self.assertEqual(features.arp_reply_ratio,
+                                 record['config']['arp_reply_count']/total)
             self.assertEqual(features.conflict, .5 if record['config']['gateway_claim'] else 0)
 
     def test_new_attacker_no_baseline_end_to_end(self):

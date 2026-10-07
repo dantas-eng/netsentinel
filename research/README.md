@@ -1,4 +1,4 @@
-# Experimento vigente: corpus ARP v2, baseline manual 0.7.0
+# Experimento vigente: corpus ARP v3, baseline manual 0.7.0+adr0013
 
 Extensão offline opcional. O classificador operacional permanece intacto. Regras
 Mamdani importadas da aplicação, ausência-como-zero e rampa ratio fixa 0,5–1,0.
@@ -21,9 +21,9 @@ python -m ruff check .
 ```
 
 Para regenerar tudo sem sobrescrever a entrega, use `--output research/reproduction`
-no comando de experimento. O runner gera dataset v2 se ausente, executa diagnóstico
+no comando de experimento. O runner gera dataset v3 se ausente, executa diagnóstico
 antes de qualquer métrica, então roda 20 sementes por método. Se o manifesto já
-existe, exige versão 2; manifestos anteriores são rejeitados, não completados com
+existe, exige versão 3; manifestos anteriores são rejeitados, não completados com
 features inventadas. Checkpoint é evidência parcial; nova execução reinicia as 40
 rodadas. Os testes da entrega usam o diretório research/results incluído no ZIP.
 
@@ -95,7 +95,7 @@ decisões binárias quando variados isoladamente, sem mudar os demais genes.
 R5 volta a disparar. R4 continua sem ativação neste corpus porque NEW não possui
 baseline: sua cláusula de desvio baixo carece de evidência. Isso é limitação
 explícita, distinta da saturação do ratio, e não se fabrica histórico para removê-la.
-As cinco regras mantêm testes isolados; a comparação empírica cobre R1/R2/R3/R5.
+As cinco regras mantêm testes isolados; a comparação empírica cobre R1–R5 (R4 ativa por evidência ausente neutra, ADR 0013).
 
 O diagnóstico rejeita corpus degenerado e genes frequência/desvio sem efeito antes
 do cálculo de métricas comparativas. Não impõe F1 mínimo, não seleciona cenários
