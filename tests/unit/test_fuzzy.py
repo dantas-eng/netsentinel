@@ -186,6 +186,52 @@ class FeatureTests(unittest.TestCase):
         self.assertIsNone(result.arp_reply_ratio)
         self.assertIn('arp_reply_ratio_unavailable', result.missing_reasons)
 
+    @staticmethod
+    def two_devices(rep_aa, rep_bb, upper=False, provider=None):
+        devs = {m: dict(bytes=0, arp_requests=0, arp_replies=10) for m in ('aa', 'bb')}
+        cl = [dict(ip='10.0.0.1', claimed_mac=m, source_mac=m, count=10)
+              for m in ('aa', 'BB' if upper else 'bb')]
+        provider = provider or FixedReputation({'aa': rep_aa, 'bb': rep_bb})
+        return FeatureExtractor(provider, FixedBaseline({})).extract(
+            snapshot(devices=devs, arp_claims=cl))
+
+    def test_conflict_spares_known_owner(self):
+        r = self.two_devices(Reputation.KNOWN, Reputation.NEW)
+        self.assertEqual((r['aa'].conflict, r['bb'].conflict), (0, 0.5))
+
+    def test_conflict_shared_when_same_reputation(self):
+        for rep in (Reputation.KNOWN, Reputation.NEW):
+            r = self.two_devices(rep, rep)
+            self.assertEqual((r['aa'].conflict, r['bb'].conflict), (0.5, 0.5))
+
+    def test_unknown_reputation_counts_as_not_recognized(self):
+        r = self.two_devices(Reputation.KNOWN, Reputation.UNKNOWN)
+        self.assertEqual((r['aa'].conflict, r['bb'].conflict), (0, 0.5))
+
+    def test_conflict_matches_mac_case_insensitively(self):
+        r = self.two_devices(Reputation.KNOWN, Reputation.NEW, upper=True)
+        self.assertEqual((r['aa'].conflict, r['bb'].conflict), (0, 0.5))
+
+    def test_reputation_queried_once_per_mac(self):
+        calls = {}
+
+        class Counting:
+            def get_reputation(self, mac):
+                calls[mac] = calls.get(mac, 0) + 1
+                return Reputation.NEW
+
+        self.two_devices(None, None, provider=Counting())
+        self.assertEqual(calls, {'aa': 1, 'bb': 1})
+
+    def test_ratio_needs_minimum_sample(self):
+        for req, rep, expected in [(0, 3, None), (1, 2, None), (0, 4, 1.0), (2, 2, 0.5)]:
+            data = snapshot(devices={'aa': dict(bytes=1000, arp_requests=req, arp_replies=rep)})
+            result = self.make_extractor().extract(data)['aa']
+            self.assertEqual(result.arp_reply_ratio, expected)
+            if expected is None:
+                self.assertIn('arp_reply_ratio_insufficient_sample', result.missing_reasons)
+                self.assertIsNotNone(result.arp_frequency)
+
     def test_incomplete_window_forces_ratio_none(self):
         result = self.make_extractor().extract(snapshot(incomplete=True))['aa']
         self.assertIsNone(result.arp_reply_ratio)

@@ -4,6 +4,8 @@ from math import isfinite
 from netsentinel.analysis.contracts import BaselineProvider, Reputation, ReputationProvider
 from netsentinel.analysis.models import RiskInputs
 
+ARP_RATIO_MIN_PACKETS = 4
+
 
 class FeatureExtractor:
     def __init__(self, reputation: ReputationProvider, baseline: BaselineProvider):
@@ -11,13 +13,32 @@ class FeatureExtractor:
         self.baseline = baseline
 
     def extract(self, snapshot: dict) -> dict[str, RiskInputs]:
+        """Conflito poupa dono reconhecido e razão exige amostra mínima (ADR 0013)."""
         claims_by_ip = defaultdict(set)
+        sources_by_ip = defaultdict(set)
         ips_by_source = defaultdict(set)
         for claim in snapshot["arp_claims"]:
             if claim["ip"] == "0.0.0.0":
                 continue
             claims_by_ip[claim["ip"]].add(claim["claimed_mac"].lower())
-            ips_by_source[claim["source_mac"].lower()].add(claim["ip"])
+            source = claim["source_mac"].lower()
+            sources_by_ip[claim["ip"]].add(source)
+            ips_by_source[source].add(claim["ip"])
+
+        # Uma consulta por MAC; chave minúscula para casar com as alegações.
+        cache = {}
+
+        def reputation_of(mac):
+            if mac.lower() not in cache:
+                cache[mac.lower()] = self.reputation.get_reputation(mac)
+            return cache[mac.lower()]
+
+        def conflict_at(ip, mac):
+            sources = sources_by_ip[ip]
+            known = {m for m in sources if reputation_of(m) == Reputation.KNOWN}
+            if mac in known and len(known) < len(sources):
+                return 0.0
+            return 1 - 1 / len(claims_by_ip[ip])
 
         # Qualidade invalida as medições derivadas da captura, não o resultado.
         # Mesmo nesses casos a inferência é executada com graus zero nos inputs ausentes.
@@ -31,7 +52,7 @@ class FeatureExtractor:
         results = {}
         for mac, device in snapshot["devices"].items():
             reasons = list(quality)
-            reputation = self.reputation.get_reputation(mac)
+            reputation = reputation_of(mac)
             if reputation is None or reputation == Reputation.UNKNOWN:
                 reputation_value = None
                 reasons.append("reputation_unavailable")
@@ -47,11 +68,13 @@ class FeatureExtractor:
 
             conflict = frequency = deviation = ratio = None
             if not quality:
-                conflict = max((1 - 1 / len(claims_by_ip[ip])
+                conflict = max((conflict_at(ip, mac.lower())
                                 for ip in ips_by_source[mac.lower()]), default=0.0)
                 total_arp = device["arp_requests"] + device["arp_replies"]
-                if total_arp > 0:
+                if total_arp >= ARP_RATIO_MIN_PACKETS:
                     ratio = device["arp_replies"] / total_arp
+                elif total_arp > 0:
+                    reasons.append("arp_reply_ratio_insufficient_sample")
                 else:
                     reasons.append("arp_reply_ratio_unavailable")
                 if duration_valid:
