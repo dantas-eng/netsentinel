@@ -11,7 +11,7 @@ namespaces de rede (gateway, Vítima, Atacante e Sensor numa bridge em modo hub)
 não versionado, indicou detecção e mitigação do Atacante, mas mostrou que a
 classificação dos dispositivos legítimos enganava quem olhava o painel. Esse
 ensaio não é evidência de aceite; a validação versionada com o modelo novo está
-em `docs/validation/ensaio-namespaces-2026-10-07.md` (criado em etapa posterior).
+em [`docs/validation/ensaio-namespaces-2026-10-07.md`](../validation/ensaio-namespaces-2026-10-07.md).
 O ensaio nas quatro VMs segue pendente.
 
 1. **Gateway suspeito (81) durante o ataque.** O conflito `1 - 1/n` por IP
@@ -106,8 +106,8 @@ Valores simulados no motor real (tabela do desenho); não são medições de red
 | Atacante com gateway alegando junto | 82 suspeito | 82 suspeito |
 
 A validação com kernel e nftables reais em namespaces está no registro
-`docs/validation/ensaio-namespaces-2026-10-07.md` (a ser criado na reexecução
-do ensaio). Ela antecipa, mas não substitui, o ensaio nas quatro VMs.
+`docs/validation/ensaio-namespaces-2026-10-07.md` (resultado do ensaio
+reexecutado com o modelo novo). Ela antecipa, mas não substitui, o ensaio nas quatro VMs.
 
 Métricas internas ([fuzzy-metrics.md](../validation/fuzzy-metrics.md)): 15/15
 cenários corretos; só `no_arp_known` mudou (de abstenção para confiável) e a
