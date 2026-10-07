@@ -13,6 +13,7 @@ Corpus v3 (modelo da ADR 0013): requests e replies ARP reais em PCAPs sintético
 Valores: média ± desvio-padrão amostral (ddof=1). O baseline é uma única execução determinística; a variação dos métodos mede somente aleatoriedade da busca neste split, não incerteza de generalização.
 
 Neste split sintético, ambos os métodos obtiveram F1 médio maior que o manual.
+Diferença de F1 médio em relação ao manual: GA +0.0102; NSGA2 +0.0011.
 
 A frente agrupada contém 33 pontos objetivos distintos. As ligações no gráfico são guias visuais, não soluções intermediárias garantidas.
 
@@ -24,6 +25,10 @@ Não há garantia de superioridade sobre o manual. Sobreposição entre família
 
 Tempo total de otimização/avaliação: 256.6 s.
 Dados, hashes de PCAP, sementes, parâmetros individuais, versões e arquivos de treino completos estão em dataset/dataset.json e results.json.
+
+GA: o recall médio maior vem acompanhado de mais falsos positivos (FPR médio maior) e precisão média menor que a do manual. F1 maior não significa superioridade em todas as métricas.
+
+NSGA2: o recall médio maior vem acompanhado de mais falsos positivos (FPR médio maior) e precisão média menor que a do manual. F1 maior não significa superioridade em todas as métricas.
 
 ## Validade e cobertura do corpus
 

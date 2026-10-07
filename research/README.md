@@ -92,9 +92,8 @@ são extraídos depois da releitura do PCAP, não preenchidos artificialmente.
 Diagnóstico anterior à busca: 219 ratios distintos, 575/600 exemplos com requests;
 400/420 benignos com requests. No treino, frequência e desvio alteram scores e
 decisões binárias quando variados isoladamente, sem mudar os demais genes.
-R5 volta a disparar. R4 continua sem ativação neste corpus porque NEW não possui
-baseline: sua cláusula de desvio baixo carece de evidência. Isso é limitação
-explícita, distinta da saturação do ratio, e não se fabrica histórico para removê-la.
+R5 volta a disparar. Com a ADR 0013, desvio ausente (NEW sem baseline) é neutro e R4 ativa;
+isso não confirma desvio baixo nem se fabrica histórico para obtê-lo.
 As cinco regras mantêm testes isolados; a comparação empírica cobre R1–R5 (R4 ativa por evidência ausente neutra, ADR 0013).
 
 O diagnóstico rejeita corpus degenerado e genes frequência/desvio sem efeito antes

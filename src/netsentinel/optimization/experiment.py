@@ -212,7 +212,10 @@ def report(directory, output):
              'neste split, não incerteza de generalização.', '',
              'Neste split sintético, ambos os métodos obtiveram F1 médio maior que o manual.'
              if all(v['f1']['mean'] > baseline['f1'] for v in output['summary_test'].values())
-             else 'Neste split, pelo menos um método não superou o F1 do manual.', '',
+             else 'Neste split, pelo menos um método não superou o F1 do manual.',
+             'Diferença de F1 médio em relação ao manual: ' + '; '.join(
+                 f'{m.upper()} {v["f1"]["mean"]-baseline["f1"]:+.4f}'
+                 for m, v in output['summary_test'].items()) + '.', '',
              f'A frente agrupada contém {len(unique)} pontos objetivos distintos. '
              'As ligações no gráfico são guias visuais, não soluções intermediárias garantidas.', '',
              'O painel de teste plota as 20 execuções individuais de cada método, '
@@ -235,6 +238,12 @@ def report(directory, output):
             text += ['', f'{method.upper()}: a redução média de falsos positivos vem '
                      'acompanhada de recall médio menor que o manual. F1 maior não '
                      'significa superioridade em todas as métricas.']
+        if (summary['fpr']['mean'] > baseline['fpr'] and
+                summary['recall']['mean'] > baseline['recall']):
+            text += ['', f'{method.upper()}: o recall médio maior vem acompanhado de mais '
+                     'falsos positivos (FPR médio maior) e precisão média '
+                     f'{"menor" if summary["precision"]["mean"] < baseline["precision"] else "não menor"}'
+                     ' que a do manual. F1 maior não significa superioridade em todas as métricas.']
     diag = output['diagnostics']
     text += ['', '## Validade e cobertura do corpus', '',
              f'Ratio: {diag["ratio"]["all"]["distinct"]} valores distintos; '
