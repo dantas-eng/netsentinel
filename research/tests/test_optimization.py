@@ -146,7 +146,8 @@ class DatasetTests(unittest.TestCase):
         for values in result['training_one_gene_at_a_time'].values():
             self.assertGreater(values['binary_decision_changes'], 0)
         self.assertGreater(result['training_rule_activation']['R5'], 0)
-        self.assertEqual(result['training_rule_activation']['R4'], 0)
+        # ADR 0013: ratio/desvio ausentes são neutros, então R4 também ativa.
+        self.assertGreater(result['training_rule_activation']['R4'], 0)
         self.assertTrue(all(r['inputs']['volume_deviation'] is None
                             for r in self.records if r['inputs']['reputation'] == 'new'))
 

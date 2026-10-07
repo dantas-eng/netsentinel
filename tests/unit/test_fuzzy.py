@@ -65,11 +65,21 @@ class RuleTests(unittest.TestCase):
     def test_or_works_with_frequency_absent(self):
         self.assertEqual(evaluate(fuzzify(inputs(f=None, r='new', d=1)))['R2'], 1)
 
-    def test_and_requires_low_deviation_evidence(self):
-        for reputation in ('new', 'known'):
-            strengths = evaluate(fuzzify(inputs(r=reputation, d=None)))
-            self.assertEqual(strengths['R4'], 0)
-            self.assertEqual(strengths['R5'], 0)
+    def test_absent_deviation_is_neutral_in_calm_rules(self):
+        # ADR 0013: desvio/ratio ausentes são neutros (1) nas regras de calma.
+        self.assertEqual(evaluate(fuzzify(inputs(d=None)))['R5'], 1)
+        self.assertEqual(evaluate(fuzzify(inputs(r='new', d=None)))['R4'], 1)
+
+    def test_present_bad_evidence_blocks_green(self):
+        # ADR 0013: evidência presente e ruim continua barrando a calma.
+        for data in (inputs(d=2.0), inputs(f=10, ratio=1.0)):
+            with self.subTest(data=data):
+                result = infer(data)
+                self.assertEqual(result.rule_strengths['R5'], 0)
+                self.assertEqual(result.classification, 'desconhecido')
+
+    def test_ratio_at_floor_with_four_packets_is_calm(self):
+        self.assertEqual(evaluate(fuzzify(inputs(ratio=0.5)))['R5'], 1)
 
     def test_fractional_min_max(self):
         strengths = evaluate(fuzzify(inputs(c=0.5, f=4, r='new', d=None)))
@@ -91,10 +101,17 @@ class InferenceTests(unittest.TestCase):
         self.assertEqual(result.reason, 'no_rule_activated')
         self.assertEqual(max(result.rule_strengths.values()), 0)
 
-    def test_no_false_safe_without_baseline(self):
+    def test_known_quiet_without_baseline_is_confiavel(self):
+        # ADR 0013: sem baseline/ratio, conflito e frequência baixos bastam.
         result = infer(inputs(d=None))
-        self.assertIsNone(result.score)
-        self.assertEqual(result.reason, 'no_rule_activated')
+        self.assertAlmostEqual(result.score, 140 / 9, places=8)
+        self.assertEqual(result.classification, 'confiável')
+
+    def test_missing_conflict_still_abstains(self):
+        self.assertIsNone(infer(inputs(c=None, f=0, d=None)).score)
+
+    def test_missing_frequency_still_abstains(self):
+        self.assertIsNone(infer(inputs(f=None, d=None)).score)
 
     def test_r1_survives_all_other_missing(self):
         result = infer(inputs(c=0.5, f=None, r=None, d=None))
@@ -110,9 +127,9 @@ class InferenceTests(unittest.TestCase):
 
     def test_centroids_of_approved_shapes(self):
         # Áreas/centroides analíticos dos trapézios: 30 de área, 466 2/3 de momento.
-        # ratio ausente: R4/R5 exigem ratio.low → abstenção (consequência prevista).
-        self.assertIsNone(infer(inputs()).score)
-        self.assertIsNone(infer(inputs(r='new')).score)
+        # ADR 0013: ratio ausente é neutro, então não há abstenção.
+        self.assertAlmostEqual(infer(inputs()).score, 140 / 9, places=8)
+        self.assertAlmostEqual(infer(inputs(r='new')).score, 50, places=8)
         self.assertAlmostEqual(infer(inputs(ratio=0.5)).score, 140 / 9, places=8)
         self.assertAlmostEqual(infer(inputs(r='new', ratio=0.5)).score, 50, places=8)
         self.assertAlmostEqual(infer(inputs(c=1)).score, 100 - 140 / 9, places=8)
@@ -136,16 +153,14 @@ class InferenceTests(unittest.TestCase):
         self.assertEqual(result.rule_strengths['R3'], 1)
         self.assertEqual(result.classification, 'desconhecido')
 
-    def test_absent_ratio_blocks_low_declaration(self):
+    def test_absent_ratio_is_neutral(self):
+        # ADR 0013: ratio ausente não bloqueia a declaração de calma.
         known = infer(inputs())
-        self.assertEqual(known.rule_strengths['R4'], 0)
-        self.assertEqual(known.rule_strengths['R5'], 0)
-        self.assertIsNone(known.score)
-        self.assertEqual(known.reason, 'no_rule_activated')
+        self.assertEqual(known.rule_strengths['R5'], 1)
+        self.assertEqual(known.classification, 'confiável')
         newbie = infer(inputs(r='new'))
-        self.assertEqual(newbie.rule_strengths['R4'], 0)
-        self.assertEqual(newbie.rule_strengths['R5'], 0)
-        self.assertIsNone(newbie.score)
+        self.assertEqual(newbie.rule_strengths['R4'], 1)
+        self.assertAlmostEqual(newbie.score, 50, places=8)
 
 
 class FeatureTests(unittest.TestCase):
