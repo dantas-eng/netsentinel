@@ -1,7 +1,7 @@
-# Experimento vigente: corpus ARP v2, baseline manual 0.7.0
+# Experimento vigente: corpus ARP v3, baseline manual 0.7.0+adr0013
 
 Extensão offline opcional. O classificador operacional permanece intacto. Regras
-Mamdani importadas da aplicação, ausência-como-zero e rampa ratio fixa 0,5–1,0.
+Mamdani importadas da aplicação, ausência com pertinência zero (neutra em R4/R5, ADR 0013) e rampa ratio fixa 0,5–1,0.
 Quatro genes: saturação de conflito, frequência, desvio e limiar superior.
 A decisão foi tomada após diagnóstico do corpus, conforme
 [ADR 0011](../docs/decisions/0011-corpus-arp-variavel-e-validade-experimental.md).
@@ -21,9 +21,9 @@ python -m ruff check .
 ```
 
 Para regenerar tudo sem sobrescrever a entrega, use `--output research/reproduction`
-no comando de experimento. O runner gera dataset v2 se ausente, executa diagnóstico
+no comando de experimento. O runner gera dataset v3 se ausente, executa diagnóstico
 antes de qualquer métrica, então roda 20 sementes por método. Se o manifesto já
-existe, exige versão 2; manifestos anteriores são rejeitados, não completados com
+existe, exige versão 3; manifestos anteriores são rejeitados, não completados com
 features inventadas. Checkpoint é evidência parcial; nova execução reinicia as 40
 rodadas. Os testes da entrega usam o diretório research/results incluído no ZIP.
 
@@ -36,6 +36,9 @@ nftables, Docker ou banco. Instalar DEAP permanece opcional para executar o MVP.
 - `results/results.json` e `metrics.csv`: 40 execuções, parâmetros e métricas.
 - `results/diagnostics.json`: distribuição de ratio, ativação e sensibilidade.
 - `results/dataset/dataset.json` e `pcaps/`: manifestos e 600 PCAPs sintéticos.
+- `historical-invalid/v070-pre-adr0013/`: modelo anterior à
+  [ADR 0013](../docs/decisions/0013-classificacao-de-dispositivos-legitimos.md)
+  (corpus v2; manual F1 0,4950, GA 0,6406, NSGA-II 0,6321). Substituído pelo v3.
 - `historical-invalid/v060/`: comparação anterior inválida para a avaliação atual;
   usa outro baseline e corpus. A 0.6.0 não tinha ratio nas regras.
 - `historical-invalid/v070-constant-ratio/`: comparação degenerada, invalidada;
@@ -46,6 +49,20 @@ e seus manifestos foram removidos do checkout no commit 7c88d5d; podem ser
 consultados no histórico Git anterior. Não afirmar que os PCAPs/manifestos antigos
 continuam neste diretório. O antigo empate não é evidência
 de equivalência entre algoritmos. Não misturar métricas de corpus/baselines diferentes.
+
+## Resultado com o modelo da ADR 0013
+
+No teste reservado (120 exemplos) o manual obtém F1 0,6389 (antes 0,4950),
+GA 0,6490 ± 0,0008 e NSGA-II 0,6400. A vantagem sobre o manual é marginal
+(GA +0,0102; NSGA-II +0,0011) e vem com FPR maior (0,1810 e 0,1786 contra 0,1548)
+e precisão menor (0,6202 e 0,6154 contra 0,6389). O ganho principal foi do
+modelo, não da otimização; não se afirma superioridade dos otimizadores.
+
+O ganho do modelo tem custo declarado: no manual, o FPR caiu de 0,4762 para 0,1548,
+mas o recall caiu de 0,6944 para 0,6389 (25 para 23 de 36 ataques no teste). Seis
+ataques que o modelo anterior sinalizava (3 treino, 1 validação, 2 teste, todos
+`poison_no_gateway_claim`) ficam abaixo de 65, por causa da amostra mínima da razão
+e da calma neutra. É a perda de sensibilidade a atacantes lentos da ADR 0013.
 
 ## Dados sintéticos e rótulos
 
@@ -92,10 +109,9 @@ são extraídos depois da releitura do PCAP, não preenchidos artificialmente.
 Diagnóstico anterior à busca: 219 ratios distintos, 575/600 exemplos com requests;
 400/420 benignos com requests. No treino, frequência e desvio alteram scores e
 decisões binárias quando variados isoladamente, sem mudar os demais genes.
-R5 volta a disparar. R4 continua sem ativação neste corpus porque NEW não possui
-baseline: sua cláusula de desvio baixo carece de evidência. Isso é limitação
-explícita, distinta da saturação do ratio, e não se fabrica histórico para removê-la.
-As cinco regras mantêm testes isolados; a comparação empírica cobre R1/R2/R3/R5.
+R5 volta a disparar. Com a ADR 0013, desvio ausente (NEW sem baseline) é neutro e R4 ativa;
+isso não confirma desvio baixo nem se fabrica histórico para obtê-lo.
+As cinco regras mantêm testes isolados; a comparação empírica cobre R1–R5 (R4 ativa por evidência ausente neutra, ADR 0013).
 
 O diagnóstico rejeita corpus degenerado e genes frequência/desvio sem efeito antes
 do cálculo de métricas comparativas. Não impõe F1 mínimo, não seleciona cenários

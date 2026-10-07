@@ -65,11 +65,21 @@ class RuleTests(unittest.TestCase):
     def test_or_works_with_frequency_absent(self):
         self.assertEqual(evaluate(fuzzify(inputs(f=None, r='new', d=1)))['R2'], 1)
 
-    def test_and_requires_low_deviation_evidence(self):
-        for reputation in ('new', 'known'):
-            strengths = evaluate(fuzzify(inputs(r=reputation, d=None)))
-            self.assertEqual(strengths['R4'], 0)
-            self.assertEqual(strengths['R5'], 0)
+    def test_absent_deviation_is_neutral_in_calm_rules(self):
+        # ADR 0013: desvio/ratio ausentes são neutros (1) nas regras de calma.
+        self.assertEqual(evaluate(fuzzify(inputs(d=None)))['R5'], 1)
+        self.assertEqual(evaluate(fuzzify(inputs(r='new', d=None)))['R4'], 1)
+
+    def test_present_bad_evidence_blocks_green(self):
+        # ADR 0013: evidência presente e ruim continua barrando a calma.
+        for data in (inputs(d=2.0), inputs(f=10, ratio=1.0)):
+            with self.subTest(data=data):
+                result = infer(data)
+                self.assertEqual(result.rule_strengths['R5'], 0)
+                self.assertEqual(result.classification, 'desconhecido')
+
+    def test_ratio_at_floor_with_four_packets_is_calm(self):
+        self.assertEqual(evaluate(fuzzify(inputs(ratio=0.5)))['R5'], 1)
 
     def test_fractional_min_max(self):
         strengths = evaluate(fuzzify(inputs(c=0.5, f=4, r='new', d=None)))
@@ -91,10 +101,21 @@ class InferenceTests(unittest.TestCase):
         self.assertEqual(result.reason, 'no_rule_activated')
         self.assertEqual(max(result.rule_strengths.values()), 0)
 
-    def test_no_false_safe_without_baseline(self):
+    def test_known_quiet_without_baseline_is_confiavel(self):
+        # ADR 0013: sem baseline/ratio, conflito e frequência baixos bastam.
         result = infer(inputs(d=None))
-        self.assertIsNone(result.score)
-        self.assertEqual(result.reason, 'no_rule_activated')
+        self.assertAlmostEqual(result.score, 140 / 9, places=8)
+        self.assertEqual(result.classification, 'confiável')
+
+    def test_missing_conflict_still_abstains(self):
+        self.assertIsNone(infer(inputs(c=None, f=0, d=None)).score)
+
+    def test_missing_frequency_still_abstains(self):
+        self.assertIsNone(infer(inputs(f=None, d=None)).score)
+
+    def test_known_warmup_without_any_measure_abstains(self):
+        # Conhecido sem conflito, frequência, desvio nem razão: abstém, não vira confiável.
+        self.assertIsNone(infer(inputs(c=None, f=None, r='known', d=None)).score)
 
     def test_r1_survives_all_other_missing(self):
         result = infer(inputs(c=0.5, f=None, r=None, d=None))
@@ -110,9 +131,9 @@ class InferenceTests(unittest.TestCase):
 
     def test_centroids_of_approved_shapes(self):
         # Áreas/centroides analíticos dos trapézios: 30 de área, 466 2/3 de momento.
-        # ratio ausente: R4/R5 exigem ratio.low → abstenção (consequência prevista).
-        self.assertIsNone(infer(inputs()).score)
-        self.assertIsNone(infer(inputs(r='new')).score)
+        # ADR 0013: ratio ausente é neutro, então não há abstenção.
+        self.assertAlmostEqual(infer(inputs()).score, 140 / 9, places=8)
+        self.assertAlmostEqual(infer(inputs(r='new')).score, 50, places=8)
         self.assertAlmostEqual(infer(inputs(ratio=0.5)).score, 140 / 9, places=8)
         self.assertAlmostEqual(infer(inputs(r='new', ratio=0.5)).score, 50, places=8)
         self.assertAlmostEqual(infer(inputs(c=1)).score, 100 - 140 / 9, places=8)
@@ -136,16 +157,14 @@ class InferenceTests(unittest.TestCase):
         self.assertEqual(result.rule_strengths['R3'], 1)
         self.assertEqual(result.classification, 'desconhecido')
 
-    def test_absent_ratio_blocks_low_declaration(self):
+    def test_absent_ratio_is_neutral(self):
+        # ADR 0013: ratio ausente não bloqueia a declaração de calma.
         known = infer(inputs())
-        self.assertEqual(known.rule_strengths['R4'], 0)
-        self.assertEqual(known.rule_strengths['R5'], 0)
-        self.assertIsNone(known.score)
-        self.assertEqual(known.reason, 'no_rule_activated')
+        self.assertEqual(known.rule_strengths['R5'], 1)
+        self.assertEqual(known.classification, 'confiável')
         newbie = infer(inputs(r='new'))
-        self.assertEqual(newbie.rule_strengths['R4'], 0)
-        self.assertEqual(newbie.rule_strengths['R5'], 0)
-        self.assertIsNone(newbie.score)
+        self.assertEqual(newbie.rule_strengths['R4'], 1)
+        self.assertAlmostEqual(newbie.score, 50, places=8)
 
 
 class FeatureTests(unittest.TestCase):
@@ -186,6 +205,52 @@ class FeatureTests(unittest.TestCase):
         self.assertIsNone(result.arp_reply_ratio)
         self.assertIn('arp_reply_ratio_unavailable', result.missing_reasons)
 
+    @staticmethod
+    def two_devices(rep_aa, rep_bb, upper=False, provider=None):
+        devs = {m: dict(bytes=0, arp_requests=0, arp_replies=10) for m in ('aa', 'bb')}
+        cl = [dict(ip='10.0.0.1', claimed_mac=m, source_mac=m, count=10)
+              for m in ('aa', 'BB' if upper else 'bb')]
+        provider = provider or FixedReputation({'aa': rep_aa, 'bb': rep_bb})
+        return FeatureExtractor(provider, FixedBaseline({})).extract(
+            snapshot(devices=devs, arp_claims=cl))
+
+    def test_conflict_spares_known_owner(self):
+        r = self.two_devices(Reputation.KNOWN, Reputation.NEW)
+        self.assertEqual((r['aa'].conflict, r['bb'].conflict), (0, 0.5))
+
+    def test_conflict_shared_when_same_reputation(self):
+        for rep in (Reputation.KNOWN, Reputation.NEW):
+            r = self.two_devices(rep, rep)
+            self.assertEqual((r['aa'].conflict, r['bb'].conflict), (0.5, 0.5))
+
+    def test_unknown_reputation_counts_as_not_recognized(self):
+        r = self.two_devices(Reputation.KNOWN, Reputation.UNKNOWN)
+        self.assertEqual((r['aa'].conflict, r['bb'].conflict), (0, 0.5))
+
+    def test_conflict_matches_mac_case_insensitively(self):
+        r = self.two_devices(Reputation.KNOWN, Reputation.NEW, upper=True)
+        self.assertEqual((r['aa'].conflict, r['bb'].conflict), (0, 0.5))
+
+    def test_reputation_queried_once_per_mac(self):
+        calls = {}
+
+        class Counting:
+            def get_reputation(self, mac):
+                calls[mac] = calls.get(mac, 0) + 1
+                return Reputation.NEW
+
+        self.two_devices(None, None, provider=Counting())
+        self.assertEqual(calls, {'aa': 1, 'bb': 1})
+
+    def test_ratio_needs_minimum_sample(self):
+        for req, rep, expected in [(0, 3, None), (1, 2, None), (0, 4, 1.0), (2, 2, 0.5)]:
+            data = snapshot(devices={'aa': dict(bytes=1000, arp_requests=req, arp_replies=rep)})
+            result = self.make_extractor().extract(data)['aa']
+            self.assertEqual(result.arp_reply_ratio, expected)
+            if expected is None:
+                self.assertIn('arp_reply_ratio_insufficient_sample', result.missing_reasons)
+                self.assertIsNotNone(result.arp_frequency)
+
     def test_incomplete_window_forces_ratio_none(self):
         result = self.make_extractor().extract(snapshot(incomplete=True))['aa']
         self.assertIsNone(result.arp_reply_ratio)
@@ -208,3 +273,16 @@ class FeatureTests(unittest.TestCase):
                                       (Reputation.KNOWN, 'desconhecido')]:
             engine = FuzzyRiskStrategy(FixedReputation({'aa': reputation}), FixedBaseline({}))
             self.assertEqual(engine.classify(snapshot())['aa'].classification, expected)
+
+    def test_slow_new_attacker_below_mitigation_threshold(self):
+        # Limitação conhecida e aceita (ADR 0013): com 3 respostas na janela de 8 s,
+        # sem conflito nem baseline, a razão fica ausente (amostra mínima de 4) e o
+        # atacante novo pontua desconhecido, abaixo de 65, sem acionar a mitigação.
+        data = snapshot(observed_seconds=8,
+                        devices={'aa': dict(bytes=0, arp_requests=0, arp_replies=3)})
+        features = self.make_extractor(baseline=None).extract(data)['aa']
+        self.assertEqual(features.conflict, 0)
+        self.assertIsNone(features.arp_reply_ratio)
+        result = infer(features)
+        self.assertEqual(result.classification, 'desconhecido')
+        self.assertLess(result.score, 65)

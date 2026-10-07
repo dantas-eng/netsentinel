@@ -1,25 +1,5 @@
 # Validação do corpus v2 e correção experimental
 
-## Atualização — corpus v3 (ADR 0013, 07/10/2026)
-
-As regras R4/R5, o conflito e a amostra mínima da razão mudaram
-([ADR 0013](../docs/decisions/0013-classificacao-de-dispositivos-legitimos.md)),
-então o experimento foi refeito. O texto abaixo descreve a validação do corpus v2
-e é conservado como histórico das decisões da ADR 0011; os números vigentes são
-os desta seção e de `results/report.md`.
-
-- Corpus v3: mesmos 600 cenários, famílias, rótulos, splits (360/120/120) e
-  PCAPs byte a byte idênticos; apenas as entradas extraídas de 77 registros mudaram.
-- 20 sementes GA e 20 NSGA-II, população 40, 40 gerações, mesmo protocolo.
-- Teste reservado: manual F1 0,6389 (antes 0,4950); GA 0,6490 ± 0,0008 (antes
-  0,6406); NSGA-II 0,6400 (antes 0,6321). Margem sobre o manual: GA +0,0102,
-  NSGA-II +0,0011, com FPR maior e precisão menor. Sem alegação de superioridade.
-- Resultados anteriores arquivados em `historical-invalid/v070-pre-adr0013/`.
-- Troca do modelo novo: FPR do manual 0,4762 para 0,1548 e recall 0,6944 para
-  0,6389 (25 para 23 de 36); seis ataques `poison_no_gateway_claim` (3 treino,
-  1 validação, 2 teste) caem abaixo de 65. É o limite de atacante lento da ADR 0013.
-- Não valida tráfego real, VMs nem generalização.
-
 ## Antes de qualquer comparação
 
 Os PCAPs foram regenerados com requests/replies reais. diagnostics.json foi obtido
@@ -28,7 +8,7 @@ ratio por F1 do teste. Foram confirmados 219 ratios distintos, variação por fa
 e por classe, e influência dos quatro genes nas decisões de treino.
 
 R4 não é apresentada como coberta pelo dataset: NEW sem baseline impede confirmar
-desvio baixo (histórico v2; com a ADR 0013 a ausência de desvio não bloqueia R4/R5). R5 voltou a disparar. As cinco regras continuam nos testes isolados
+desvio baixo. R5 voltou a disparar. As cinco regras continuam nos testes isolados
 do fuzzy; não se inventou baseline para criar ativação artificial de R4.
 
 ## Regressão e testes novos
@@ -41,9 +21,7 @@ do fuzzy; não se inventou baseline para criar ativação artificial de R4.
 - 14 testes JavaScript existentes.
 - Ruff na árvore completa.
 
-Logs da execução v2 (mvp-tests.log, tests.log, frontend-tests.log, lint.log e
-run.log) foram arquivados em `historical-invalid/v070-pre-adr0013/logs/`; os
-números vigentes (v3) vêm de `results/` e dos comandos do README, sem logs próprios.
+Logs: mvp-tests.log, tests.log, frontend-tests.log, lint.log e run.log.
 A verificação final da extensão inclui todas as 40 métricas salvas e baseline,
 recalculados usando as configurações escolhidas e o teste reservado.
 

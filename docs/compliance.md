@@ -107,7 +107,7 @@ visual e o funcionamento do nftables no kernel continuam pendentes.
 
 ## 3. Computational Intelligence & Algorithm Optimization
 
-**Situação: implementado e verificado offline; validação em tráfego/VM real pendente.** O classificador fuzzy 0.7.0 continua sendo a estratégia operacional manual do sistema. A extensão AG/NSGA-II foi implementada em `optimization/` para otimização offline dos parâmetros do classificador, sem substituição automática da estratégia operacional.
+**Situação: implementado e verificado offline; validação em tráfego/VM real pendente.** O classificador fuzzy 0.7.0 + ADR 0013 continua sendo a estratégia operacional manual do sistema. A extensão AG/NSGA-II foi implementada em `optimization/` para otimização offline dos parâmetros do classificador, sem substituição automática da estratégia operacional.
 
 **Exigência:** aplicar algoritmo bioinspirado ou metaheurística para otimização ou classificação. A extensão utiliza Algoritmo Genético (GA) e NSGA-II para otimizar os parâmetros do classificador fuzzy.
 
@@ -120,6 +120,7 @@ visual e o funcionamento do nftables no kernel continuam pendentes.
 | [research/tests/test_optimization.py](../research/tests/test_optimization.py) | 18 testes da extensão de otimização executados com sucesso. |
 | [ADR 0009](decisions/0009-otimizacao-evolutiva-offline.md) | Define escopo, genes, protocolo experimental, critérios de seleção e limites da extensão offline. |
 | [ADR 0011](decisions/0011-corpus-arp-variavel-e-validade-experimental.md) | Documenta a correção do corpus de ARP e invalida as comparações históricas com ratio constante. |
+| [ADR 0013](decisions/0013-classificacao-de-dispositivos-legitimos.md) | Muda o modelo fuzzy (conflito pela reputação, evidência opcional neutra, amostra mínima da razão) e substitui os números de otimização anteriores, arquivados em `research/historical-invalid/v070-pre-adr0013/`. |
 | [research/results/report.md](../research/results/report.md) | Relatório consolidado dos experimentos, métricas, dispersão entre sementes e limitações. |
 | [research/results/results.json](../research/results/results.json) | Resultados estruturados das 20 execuções GA e 20 execuções NSGA-II. |
 | [research/results/diagnostics.json](../research/results/diagnostics.json) | Metadados e diagnósticos do corpus utilizado na avaliação oficial. |
@@ -127,13 +128,13 @@ visual e o funcionamento do nftables no kernel continuam pendentes.
 
 **Protocolo verificado:** foram avaliados 600 cenários sintéticos independentes, sendo 420 benignos e 180 ataques, com separação fixa em 360 exemplos de treino, 120 de validação e 120 de teste. Cada cenário permanece integralmente em uma única divisão. GA e NSGA-II foram executados em 20 sementes cada, totalizando 40 execuções, com população de 40 indivíduos e 40 gerações. O conjunto de teste não foi usado para otimização ou seleção dos parâmetros.
 
-**Reprodução:** uma execução independente reproduziu exatamente as 40 soluções selecionadas e suas métricas de validação/teste. As seis diferenças encontradas ficaram restritas ao `training_archive`; os objetos lógicos do dataset foram idênticos, com diferença de SHA explicada pela serialização JSON.
+**Reprodução:** o experimento foi reexecutado com o modelo da ADR 0013 (corpus v3: mesmos 600 cenários e PCAPs byte a byte idênticos; só as entradas de 77 registros mudaram). A verificação de reprodução anterior vale para o experimento arquivado, não para estes números.
 
-**Resultados documentados:** no split sintético reservado, o baseline manual apresentou F1 de 0.4950; GA apresentou F1 médio de 0.6406 e NSGA-II de 0.6321. Esses números descrevem este experimento e não constituem garantia de superioridade em tráfego real. As métricas incluem precisão, recall, F1 e FPR, com abstenções tratadas separadamente e sem remoção do denominador.
+**Resultados documentados (ADR 0013):** no split sintético reservado, o baseline manual apresentou F1 de 0.6389 (antes 0.4950, ganho do modelo novo); GA apresentou F1 médio de 0.6490 ± 0.0008 (antes 0.6406) e NSGA-II de 0.6400 (antes 0.6321). A vantagem sobre o manual é marginal (GA +0.0102, NSGA-II +0.0011) e vem com FPR maior (0.1810 e 0.1786 contra 0.1548) e precisão menor (0.6202 e 0.6154 contra 0.6389). O ganho do manual vem de uma troca declarada na ADR 0013: FPR de 0.4762 para 0.1548, mas recall de 0.6944 para 0.6389 (25 para 23 de 36 ataques); atacantes lentos (até 3 respostas forjadas por janela de 8 s, sem alegação concorrente do gateway) pontuam 51–54 e não acionam a mitigação, o que não ocorre no laboratório (10 pps). Esses números descrevem este experimento sintético e não constituem garantia de superioridade dos otimizadores nem de desempenho em tráfego real. As métricas incluem precisão, recall, F1 e FPR, com abstenções tratadas separadamente e sem remoção do denominador.
 
 **Limites:** o corpus é sintético e a validação foi offline. Não há ainda validação em tráfego real, ensaio completo nas VMs, adoção operacional dos parâmetros otimizados ou conclusão de eficácia de defesa em ambiente real. A trilha própria foi aprovada pelo professor; isso não substitui o ensaio das VMs. A antiga ADR 0010 é histórica e não deve ser usada como fonte do protocolo experimental atual.
 
-**Base operacional relacionada:** [analysis/features.py](../src/netsentinel/analysis/features.py), [fuzzy/membership.py](../src/netsentinel/analysis/fuzzy/membership.py), [fuzzy/rules.py](../src/netsentinel/analysis/fuzzy/rules.py), [fuzzy/engine.py](../src/netsentinel/analysis/fuzzy/engine.py) e [services/pipeline.py](../src/netsentinel/services/pipeline.py) permanecem como a implementação operacional do classificador fuzzy 0.7.0.
+**Base operacional relacionada:** [analysis/features.py](../src/netsentinel/analysis/features.py), [fuzzy/membership.py](../src/netsentinel/analysis/fuzzy/membership.py), [fuzzy/rules.py](../src/netsentinel/analysis/fuzzy/rules.py), [fuzzy/engine.py](../src/netsentinel/analysis/fuzzy/engine.py) e [services/pipeline.py](../src/netsentinel/services/pipeline.py) permanecem como a implementação operacional do classificador fuzzy 0.7.0 + ADR 0013.
 
 ## 4. Software Architecture & Design Patterns
 

@@ -39,6 +39,7 @@ class DemoAcceptance(unittest.TestCase):
         self.assertIsNone(result.inputs.volume_deviation)
         self.assertEqual(result.memberships['deviation'], {'low': 0, 'high': 0})
         self.assertGreaterEqual(result.score, 65)
+        self.assertAlmostEqual(result.score, 82.38, places=2)
         self.assertEqual(result.classification, 'suspeito')
         self.assertEqual(result.rule_strengths['R1'], 0.5)
         self.assertEqual(result.rule_strengths['R2'], 0.5)
@@ -51,6 +52,7 @@ class DemoAcceptance(unittest.TestCase):
         self.assertEqual(result.rule_strengths['R1'], 0)
         self.assertEqual(result.rule_strengths['R2'], 1)
         self.assertGreaterEqual(result.score, 65)
+        self.assertAlmostEqual(result.score, 84.44, places=2)
         self.assertEqual(result.classification, 'suspeito')
 
     def test_fixtures_are_byte_reproducible(self):
