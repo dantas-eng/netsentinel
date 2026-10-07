@@ -82,9 +82,10 @@ Referência da API:
 
 Exemplo central: dispositivo novo, sem baseline, conflito 0 e frequência de 5/s
 ou mais ativa R2=1 e classifica como suspeito. Com conflito 0,5, R1 continua
-ativa mesmo sem reputação. Sem desvio nem razão, R4 e R5 passam a declarar risco
-baixo desde que conflito e frequência tenham sido medidos e sejam baixos: o
-gateway conhecido e calado é confiável, e o novo calado fica em 50. Evidência
+ativa mesmo sem reputação. Sem desvio nem razão, R4 e R5 deixam de ficar
+bloqueadas, desde que conflito e frequência tenham sido medidos e sejam baixos:
+R5 declara risco baixo (conhecido calado é confiável) e R4 mantém médio (novo
+calado fica em 50). Evidência
 presente e ruim (desvio 2,0 ou 10 ARP/s) continua impedindo a calma. Na disputa
 de um IP entre um conhecido e um novo, só o novo carrega o conflito.
 

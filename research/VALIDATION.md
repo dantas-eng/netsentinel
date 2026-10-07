@@ -25,7 +25,7 @@ ratio por F1 do teste. Foram confirmados 219 ratios distintos, variação por fa
 e por classe, e influência dos quatro genes nas decisões de treino.
 
 R4 não é apresentada como coberta pelo dataset: NEW sem baseline impede confirmar
-desvio baixo. R5 voltou a disparar. As cinco regras continuam nos testes isolados
+desvio baixo (histórico v2; com a ADR 0013 a ausência de desvio não bloqueia R4/R5). R5 voltou a disparar. As cinco regras continuam nos testes isolados
 do fuzzy; não se inventou baseline para criar ativação artificial de R4.
 
 ## Regressão e testes novos

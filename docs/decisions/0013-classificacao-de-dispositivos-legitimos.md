@@ -2,14 +2,17 @@
 
 ## Status e problema
 
-Aceita em 07/10/2026 pelo grupo. Complementa as ADRs 0008 e 0011 e altera o
+Decisões D1–D3 aprovadas pelo grupo em 07/10/2026. Complementa as ADRs 0008 e 0011 e altera o
 modelo fuzzy descrito nelas; o desenho completo está em
 [specs/2026-10-07-classificacao-legitimos-design.md](../specs/2026-10-07-classificacao-legitimos-design.md).
 
-Um ensaio com kernel, Scapy e nftables reais em quatro namespaces de rede
-(gateway, Vítima, Atacante e Sensor numa bridge em modo hub) mostrou que a
-detecção e a mitigação do Atacante funcionam, mas a classificação dos
-dispositivos legítimos enganava quem olhava o painel:
+Um ensaio exploratório em 06/10/2026, com kernel, Scapy e nftables em quatro
+namespaces de rede (gateway, Vítima, Atacante e Sensor numa bridge em modo hub),
+não versionado, indicou detecção e mitigação do Atacante, mas mostrou que a
+classificação dos dispositivos legítimos enganava quem olhava o painel. Esse
+ensaio não é evidência de aceite; a validação versionada com o modelo novo está
+em `docs/validation/ensaio-namespaces-2026-10-07.md` (criado em etapa posterior).
+O ensaio nas quatro VMs segue pendente.
 
 1. **Gateway suspeito (81) durante o ataque.** O conflito `1 - 1/n` por IP
    punia todos os MACs que alegam o IP disputado, inclusive o dono legítimo.
@@ -86,15 +89,15 @@ quantidade de pacotes. A constante é ajustável no ensaio das VMs.
 - Os resultados de otimização publicados antes desta ADR deixam de descrever o
   modelo operacional (ver abaixo).
 
-## Efeito medido
+## Efeito simulado
 
-Valores simulados no motor real (tabela do desenho); não são medições de rede.
+Valores simulados no motor real (tabela do desenho); não são medições de rede. O "81" vem do ensaio exploratório de 06/10/2026 descrito acima.
 
 | Cenário | Antes | Depois |
 |---|---|---|
 | Conhecido silencioso, sem baseline | sem avaliação | 16 confiável |
 | Gateway com uma resposta ARP | 50 desconhecido | 17 confiável |
-| Gateway durante o ataque | 81 suspeito (ensaio) | 20 confiável |
+| Gateway durante o ataque | 81 suspeito (exploratório) | 20 confiável |
 | Conhecido com baseline normal (desvio 0,1) | 50 desconhecido | 20 confiável |
 | Conhecido com desvio alto (2,0) | 50 desconhecido | 50 desconhecido |
 | Conhecido com 10 ARP/s | 50 desconhecido | 50 desconhecido |
@@ -132,7 +135,11 @@ Teste reservado (120 exemplos), média ± desvio-padrão amostral:
 |---|---:|---:|---:|---:|---:|
 | Manual | 0,6389 | 0,6389 | 0,6389 | 0,1548 | 0,4950 |
 | GA | 0,6202 ± 0,0234 | 0,6833 ± 0,0342 | 0,6490 ± 0,0008 | 0,1810 ± 0,0293 | 0,6406 |
-| NSGA-II | 0,6154 | 0,6667 | 0,6400 | 0,1786 | 0,6321 |
+| NSGA-II | 0,6154 ± 0,0000 | 0,6667 ± 0,0000 | 0,6400 ± 0,0000 | 0,1786 ± 0,0000 | 0,6321 |
+
+Os 20 genótipos distintos do NSGA-II convergem para a mesma matriz de
+confusão no teste (daí o desvio zero): platô de decisão neste conjunto, não
+convergência genética nem evidência fora dele.
 
 O que isso significa, sem inflar:
 
