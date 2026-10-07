@@ -1,24 +1,49 @@
-# Contribuição
+# Como contribuir
 
-Use branches `feature/nome`, commits descritivos e PR para `main`. Todo merge
-precisa de revisão de outro integrante. A proteção de branch deve ser configurada
-no GitHub quando o repositório for criado; este arquivo não a ativa.
+Este guia descreve como o grupo trabalha no NetSentinel: branches, commits, pull
+requests, verificações locais e o que olhar numa revisão. Ele vale para código,
+documentação e pesquisa.
 
-Execute os testes descritos no README antes do PR. Na descrição, registre objetivo,
-comportamento alterado, testes executados e limitações. Revise especialmente:
-origem Ethernet versus alegação ARP, limites da janela, qualidade das métricas e
-encerramento do socket. Preserve o histórico real das revisões.
+## Fluxo de trabalho
 
-Versão inicial do módulo: 0.1.0. Ainda não há tag ou PR publicado por esta entrega.
+1. Atualize a `main` e crie uma branch a partir dela.
+2. Faça commits pequenos e com mensagem descritiva.
+3. Rode as verificações locais (seção abaixo).
+4. Abra um pull request para a `main`.
+5. Outro integrante revisa. O merge só acontece com aprovação e os checks verdes.
 
-## CI em cada pull request
+A `main` é protegida: não aceita push direto e exige os três checks do CI e uma
+aprovação de alguém que não é o autor do PR.
 
-O workflow `.github/workflows/ci.yml` executa Ruff e a suíte offline em Python 3.12.
-Também roda em push para main e pode ser disparado manualmente. Sem filtro de
-caminhos: PRs de documentação também recebem o check. Os testes rodam mesmo se
-Ruff falhar, desde que a instalação das dependências tenha funcionado.
+### Nomes de branch
 
-Na raiz do repositório, reproduza os mesmos comandos:
+Use um prefixo que diga o tipo de mudança, seguido de uma descrição curta em
+minúsculas com hífens:
+
+| Prefixo | Uso | Exemplo |
+| --- | --- | --- |
+| `feat/` | Funcionalidade nova ou mudança de comportamento | `feat/classificacao-legitimos` |
+| `fix/` | Correção de defeito | `fix/janela-incompleta` |
+| `docs/` | Só documentação | `docs/readme-contributing` |
+| `research/` | Experimentos e resultados de otimização | `research/corpus-v3` |
+| `chore/` | Build, CI, deploy, dependências | `chore/fechamento-deploy-gratuito` |
+
+### Mensagens de commit
+
+O histórico segue o formato `tipo(escopo): resumo`, em português e no imperativo.
+O escopo é opcional.
+
+```
+feat(fuzzy): conflito pela reputação e amostra mínima da razão ARP
+fix(api): rejeitar paginação com limite zero
+docs: ADR 0013 e documentação da classificação de legítimos
+```
+
+Use o corpo do commit para explicar o porquê quando ele não for óbvio pelo diff.
+
+## Verificações locais
+
+Rode na raiz do repositório antes de abrir o PR. São os mesmos comandos do CI.
 
 ```bash
 python -m pip install -e '.[dev]'
@@ -26,38 +51,85 @@ python -m ruff check .
 PYTHONPATH=src python tests/run_offline.py
 ```
 
-Ruff está fixado na versão 0.16.6 no extra dev. As regras habilitadas são E4, E7,
-E9 e F. Não há correção automática no CI; os problemas devem ser corrigidos no PR.
-Não se usa sudo, VMs, token do agente ou nftables nos testes. A instalação de
-pacotes requer acesso ao índice; o runner de testes é offline em relação à rede
-monitorada. O workflow usa pull_request, não pull_request_target, e permissions
-contents: read; não publica nem faz deploy.
+Se a mudança tocar `src/netsentinel/optimization/` ou `research/`:
 
-O arquivo precisa estar em `.github/workflows/` na raiz do repositório GitHub,
-junto a pyproject.toml e tests/. Ao copiar o ZIP, não adicionar uma pasta
-netsentinel extra acima dessa raiz. Depois da primeira execução no GitHub,
-configurar o check `Lint e testes offline` como obrigatório na proteção de main,
-junto à aprovação de outro integrante. O YAML não configura proteção de branch.
-Esta entrega valida os comandos localmente; ainda não há execução remota comprovada.
+```bash
+python -m pip install -r requirements-optimization.txt
+python -m unittest research.tests.test_optimization
+```
 
+Se tocar o dashboard, em `frontend/`:
 
-## Frontend
+```bash
+npm ci
+npm test
+npm run build
+```
 
-JavaScript puro em `src/netsentinel/api/static/`, template Flask em
-`src/netsentinel/api/templates/` e fonte Tailwind em `frontend/styles.css`.
-Antes do PR, em `frontend/`: `npm ci`, `npm test`, `npm run build`.
-Versionar o lockfile, os assets compilados e as licenças. O job frontend do CI
-confere os testes, a compilação e diferenças entre assets e fontes.
+Depois do build, `git status` não pode mostrar diferença em
+`src/netsentinel/api/static/` além do que você pretendia mudar. O CI confere isso.
 
-Na revisão, verificar CSRF pré-login e rotação pós-login, nenhum dado renderizado
-como HTML não confiável, recuperação REST sem pular IDs recebidos por Socket.IO,
-separação reputação/risco e ausência de conclusões sobre ping sem medição.
+Nenhuma verificação local usa sudo, VMs, token do agente ou nftables reais.
 
+## Pull requests
 
-## Container
+A descrição do PR deve dizer:
 
-O job `container` usa Compose com Postgres efêmero e credenciais geradas no runner,
-executa `tests/container_smoke.py` por HTTP e consulta a revisão Alembic. Esse
-smoke não integra `tests/run_offline.py`: exige Docker/serviço real e não valida
-cookies no navegador. Nunca versionar `.env.docker`. O script de início usa LF
-para funcionar em containers Linux mesmo com checkout no Windows.
+- o objetivo e o comportamento que muda;
+- como foi testado, com os comandos executados;
+- limitações conhecidas e o que fica para depois.
+
+Mantenha o PR focado num assunto. Mudanças de comportamento do classificador
+precisam de uma ADR em `docs/decisions/` e da atualização de `docs/fuzzy.md`.
+Mudanças que afetam evidências do roteiro NEXUS precisam refletir em
+`docs/compliance.md`. Registre a mudança em `CHANGELOG.md`, na seção
+"Não lançado".
+
+## CI
+
+O workflow `.github/workflows/ci.yml` roda em cada pull request, em push para a
+`main` e sob demanda. São três jobs obrigatórios:
+
+| Job | O que verifica |
+| --- | --- |
+| Lint e testes offline | Ruff, suíte offline, testes da otimização e harness de métricas fuzzy |
+| Frontend offline | Testes JavaScript, build dos assets e diferença entre fontes e assets versionados |
+| Container e Postgres sintéticos | Imagem Docker, smoke HTTP com sessão e revisão Alembic num Postgres efêmero |
+
+O job de deploy no Render só roda na `main` e quando a variável
+`RENDER_DEPLOY_ENABLED` está ativa; nos PRs ele aparece como ignorado.
+
+Ruff está fixado no extra `dev` do `pyproject.toml`, com as regras E4, E7, E9 e F.
+O CI não corrige nada automaticamente: problemas apontados devem ser resolvidos no
+próprio PR.
+
+## O que olhar numa revisão
+
+Além de legibilidade e testes, confira os pontos em que este projeto costuma errar:
+
+- **Captura:** origem Ethernet observada e MAC alegado no ARP nunca podem ser
+  confundidos; limites da janela e encerramento do socket.
+- **Classificador:** ausência de dado não é zero; nenhuma regra pode declarar risco
+  baixo a partir de um valor inventado; os scores das fixtures de aceitação não
+  mudam sem ADR.
+- **Mitigação:** só o MAC autorizado é mitigado; a evidência exige contadores
+  comparáveis; ping sozinho não comprova defesa.
+- **Dashboard:** CSRF antes do login e rotação depois; conteúdo recebido inserido
+  como texto, nunca como HTML; reconexão sem pular eventos; reputação separada de
+  risco.
+- **Pesquisa:** o conjunto de teste não escolhe parâmetros; números reportados
+  como saíram; resultados que deixam de valer vão para
+  `research/historical-invalid/` com a explicação.
+
+## Segurança e dados sensíveis
+
+Nunca versione `.env`, `.env.docker`, tokens do agente, hashes de senha reais ou a
+configuração real do laboratório. Os arquivos `*.example*` existem para isso. O
+código de ataque só pode ser executado nas VMs isoladas do laboratório.
+
+## Versões
+
+O projeto usa versionamento semântico. A versão está em `pyproject.toml` e
+`frontend/package.json`. Uma nova tag só é criada sobre um commit revisado da
+`main`, junto com a entrada correspondente no `CHANGELOG.md`. Tags existentes não
+são movidas.
