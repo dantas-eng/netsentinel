@@ -15,6 +15,9 @@ os desta seção e de `results/report.md`.
   0,6406); NSGA-II 0,6400 (antes 0,6321). Margem sobre o manual: GA +0,0102,
   NSGA-II +0,0011, com FPR maior e precisão menor. Sem alegação de superioridade.
 - Resultados anteriores arquivados em `historical-invalid/v070-pre-adr0013/`.
+- Troca do modelo novo: FPR do manual 0,4762 para 0,1548 e recall 0,6944 para
+  0,6389 (25 para 23 de 36); seis ataques `poison_no_gateway_claim` (3 treino,
+  1 validação, 2 teste) caem abaixo de 65. É o limite de atacante lento da ADR 0013.
 - Não valida tráfego real, VMs nem generalização.
 
 ## Antes de qualquer comparação
@@ -38,7 +41,9 @@ do fuzzy; não se inventou baseline para criar ativação artificial de R4.
 - 14 testes JavaScript existentes.
 - Ruff na árvore completa.
 
-Logs: mvp-tests.log, tests.log, frontend-tests.log, lint.log e run.log.
+Logs da execução v2 (mvp-tests.log, tests.log, frontend-tests.log, lint.log e
+run.log) foram arquivados em `historical-invalid/v070-pre-adr0013/logs/`; os
+números vigentes (v3) vêm de `results/` e dos comandos do README, sem logs próprios.
 A verificação final da extensão inclui todas as 40 métricas salvas e baseline,
 recalculados usando as configurações escolhidas e o teste reservado.
 

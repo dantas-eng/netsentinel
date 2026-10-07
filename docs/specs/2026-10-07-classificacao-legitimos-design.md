@@ -22,7 +22,9 @@ dispositivos legítimos é enganosa:
 
 O painel deve mostrar a rede como ela é: dispositivo reconhecido e sem sinal
 ruim aparece confiável; o dono legítimo de um IP disputado não é penalizado; a
-detecção do Atacante não muda.
+detecção do Atacante fica inalterada no cenário do laboratório (≥4 ARP por
+janela ou alegação concorrente do gateway). Atacantes lentos perdem
+sensibilidade: ver Consequências da ADR 0013.
 
 Sucesso, verificado no ensaio em namespaces: gateway, Vítima e Sensor com
 classificação `confiável` antes e durante o ataque; Atacante `suspeito`;

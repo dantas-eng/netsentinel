@@ -1,7 +1,7 @@
 # Experimento vigente: corpus ARP v3, baseline manual 0.7.0+adr0013
 
 Extensão offline opcional. O classificador operacional permanece intacto. Regras
-Mamdani importadas da aplicação, ausência-como-zero e rampa ratio fixa 0,5–1,0.
+Mamdani importadas da aplicação, ausência com pertinência zero (neutra em R4/R5, ADR 0013) e rampa ratio fixa 0,5–1,0.
 Quatro genes: saturação de conflito, frequência, desvio e limiar superior.
 A decisão foi tomada após diagnóstico do corpus, conforme
 [ADR 0011](../docs/decisions/0011-corpus-arp-variavel-e-validade-experimental.md).
@@ -57,6 +57,12 @@ GA 0,6490 ± 0,0008 e NSGA-II 0,6400. A vantagem sobre o manual é marginal
 (GA +0,0102; NSGA-II +0,0011) e vem com FPR maior (0,1810 e 0,1786 contra 0,1548)
 e precisão menor (0,6202 e 0,6154 contra 0,6389). O ganho principal foi do
 modelo, não da otimização; não se afirma superioridade dos otimizadores.
+
+O ganho do modelo tem custo declarado: no manual, o FPR caiu de 0,4762 para 0,1548,
+mas o recall caiu de 0,6944 para 0,6389 (25 para 23 de 36 ataques no teste). Seis
+ataques que o modelo anterior sinalizava (3 treino, 1 validação, 2 teste, todos
+`poison_no_gateway_claim`) ficam abaixo de 65, por causa da amostra mínima da razão
+e da calma neutra. É a perda de sensibilidade a atacantes lentos da ADR 0013.
 
 ## Dados sintéticos e rótulos
 

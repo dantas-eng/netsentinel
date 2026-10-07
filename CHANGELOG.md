@@ -14,6 +14,11 @@ normalização, janela móvel e o motor fuzzy.
 - Pesquisa refeita com o modelo novo (corpus v3): manual F1 0,6389 (antes 0,4950),
   GA 0,6490 e NSGA-II 0,6400; vantagem marginal (+0,010 e +0,001) com FPR maior.
   Resultados anteriores arquivados em `research/historical-invalid/v070-pre-adr0013/`.
+- Limite aceito (ADR 0013): atacante novo com até 3 respostas forjadas por janela de
+  8 s e sem alegação concorrente do gateway pontua 51–54 (desconhecido) e não aciona
+  a mitigação; no laboratório (10 pps) a detecção não muda. No corpus, o recall do
+  manual no teste foi de 0,6944 para 0,6389 (25 para 23 de 36) e o FPR de 0,4762
+  para 0,1548.
 
 ## Não lançado — preparação de fechamento (28/09/2026)
 

@@ -24,7 +24,9 @@ O ensaio nas quatro VMs segue pendente.
 
 Critério de sucesso: dispositivo reconhecido e sem sinal ruim aparece
 confiável; o dono legítimo de um IP disputado não é penalizado; a detecção do
-Atacante não muda. As fixtures de aceitação mantêm 82,38 e 84,44.
+Atacante fica inalterada no cenário do laboratório (≥4 ARP por janela ou
+alegação concorrente do gateway). Fora dele há perda de sensibilidade, descrita
+em Consequências. As fixtures de aceitação mantêm 82,38 e 84,44.
 
 ## Decisão
 
@@ -78,7 +80,8 @@ quantidade de pacotes. A constante é ajustável no ensaio das VMs.
 ## Consequências
 
 - Gateway e demais conhecidos aparecem confiáveis quando não há sinal ruim,
-  antes e durante o ataque; o Atacante segue suspeito.
+  antes e durante o ataque; o Atacante segue suspeito no cenário do laboratório
+  (10 pps, ≥4 ARP por janela ou alegação concorrente do gateway).
 - A decisão de mitigar (score >= 65, alegação falsa de IP confiável, MAC
   autorizado, duas avaliações) não muda.
 - Limite conhecido: com D2, um atacante já reconhecido (`KNOWN`) que alegue o IP
@@ -86,6 +89,20 @@ quantidade de pacotes. A constante é ajustável no ensaio das VMs.
   conservador, documentado, e a promoção a `KNOWN` continua manual (ADR 0004).
 - Dispositivo novo e silencioso passa de "sem avaliação" a 50 (desconhecido): é
   a classificação honesta de quem ainda não foi reconhecido.
+- Limite conhecido, aceito: atacante lento. Com D3, um atacante novo que envia
+  até 3 respostas forjadas por janela de 8 s, sem alegação concorrente do
+  gateway, fica sem razão de replies e pontua 51–54 (desconhecido) em vez de 84
+  (suspeito); a mitigação (score >= 65) não dispara. Com alegação concorrente do
+  gateway o score cai de 82,4 para 67,5, ainda acima de 65. Com D1, atacante
+  novo sem baseline em ritmo moderado (1–2 ARP/s) e razão de replies até cerca de
+  0,7 também é diluído (58–65), porque R4 passa a disparar parcialmente. O
+  laboratório (10 pps) não é afetado.
+- Troca medida no corpus v3 (classificador manual, teste reservado): FPR de
+  0,4762 para 0,1548 e recall de 0,6944 para 0,6389 (25 para 23 verdadeiros
+  positivos de 36). Seis ataques que o classificador anterior sinalizava ficam
+  abaixo de 65 (3 treino, 1 validação, 2 teste), todos da família
+  `poison_no_gateway_claim`. Alternativas, como aplicar a amostra mínima só às
+  regras de calma, ficam como decisão futura do grupo; esta ADR não as adota.
 - Os resultados de otimização publicados antes desta ADR deixam de descrever o
   modelo operacional (ver abaixo).
 

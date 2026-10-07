@@ -18,7 +18,9 @@ classificação de dispositivos legítimos da
   Scapy), `tcpdump` de ARP no Sensor, `ping -i 0.5` da Vítima ao gateway e
   log da tabela de vizinhos da Vítima a cada segundo.
 - Cenário: ~20 s de observação sem ataque; ataque de 40 s a 10 pps
-  (334 anúncios ARP falsos do Atacante alegando ser o gateway); `demo verify`
+  solicitados (334 anúncios ARP falsos do Atacante alegando ser o gateway: o
+  `attack.py` não compensa o atraso de envio com rajadas, então a taxa efetiva foi
+  de cerca de 8,4 pps); `demo verify`
   (evidência de 5 s) executado **durante** o ataque, 15 s após o início.
 - Os scripts (criação dos namespaces, execução e análise) ficaram fora do
   repositório; não são evidência versionada.
@@ -33,7 +35,7 @@ Cada linha é uma avaliação por segundo do Sensor (score fuzzy 0-100).
 
 | Dispositivo | Antes (t<0) | Durante (0 a 41 s) | Depois (>41 s) |
 |---|---|---|---|
-| Gateway `.10` | 15,6-16,6, confiável | 15,6-16,6, confiável | 15,6, confiável |
+| Gateway `.1` | 15,6-16,6, confiável | 15,6-16,6, confiável | 15,6, confiável |
 | Vítima `.20` | 15,6-16,6, confiável | 15,6-16,6, confiável | 15,6, confiável |
 | Sensor `.40` | sem tráfego ARP; não aparece | 15,6-16,6, confiável (aparece em t=3,9) | 15,6, confiável |
 | Atacante `.30` | não aparece | 82,4-84,4, suspeito (aparece em t=1,8) | 84,4, suspeito (até a última avaliação, ~t=49) |
@@ -50,7 +52,7 @@ isso não há "antes" para ele neste cenário.
 |---|---|
 | Gateway, Vítima e Sensor `confiável` antes e durante o ataque | Atendido para gateway e Vítima. Sensor `confiável` em 100% das avaliações em que aparece (durante e depois); antes do ataque ele não emite ARP e não é avaliado. |
 | Atacante `suspeito` | Atendido (82,4-84,4) |
-| `mitigation_applied` | Atendido em t=2,8 s |
+| `mitigation_applied` | Atendido em t=2,9 s |
 | Ping volta | Atendido (ver abaixo) |
 | `verify` com `verified: true` | Atendido, durante o ataque |
 
@@ -73,7 +75,7 @@ A entrada permaneceu PERMANENT com o MAC correto até o fim.
 
 ### Contadores nftables e `verify`
 
-- `mitigation_applied` (t=2,8 s): visto 15 pacotes (420 B), descartados 0,
+- `mitigation_applied` (t=2,9 s): visto 15 pacotes (420 B), descartados 0,
   passados 15, ou seja, os quadros do Atacante anteriores ao filtro.
 - `verify` (início t=15, fim t=21): **`verified: true`**, escopo
   `post_filter_attacker_mac`, `reason` nulo.

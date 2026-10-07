@@ -73,6 +73,14 @@ integrador; o limite de 3 minutos do regulamento continua valendo para a ExpoTec
     conflito daquele IP pesa só no não reconhecido. Sem sinal ruim, o gateway fica
     confiável. Limite: se o atacante também fosse KNOWN, o conflito valeria para
     os dois.
+22. **E um atacante lento, com poucas respostas por janela?** É um limite
+    aceito da ADR 0013. Com até 3 respostas forjadas em 8 s e sem alegação
+    concorrente do gateway, a razão de replies não é calculada (amostra mínima
+    de 4) e o score fica em 51–54 (desconhecido), abaixo de 65: não mitiga. No
+    laboratório (10 pps) isso não ocorre. No corpus sintético o recall do manual
+    caiu de 0,6944 para 0,6389 enquanto o FPR caiu de 0,4762 para 0,1548.
+    Alternativas, como aplicar a amostra mínima só às regras de calma, são
+    decisão futura do grupo.
 
 ## Rodada de estudo
 
