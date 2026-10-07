@@ -138,11 +138,14 @@ class DatasetTests(unittest.TestCase):
     def test_ratio_varies_in_every_family_and_both_labels(self):
         for family in {r['family'] for r in self.records}:
             rows = [r for r in self.records if r['family'] == family]
-            self.assertGreater(len({r['inputs']['arp_reply_ratio'] for r in rows}), 1)
+            # Amostra mínima (ADR 0013): ratio None em janelas com poucos ARP.
+            ratios = {r['inputs']['arp_reply_ratio'] for r in rows} - {None}
+            self.assertGreater(len(ratios), 1)
             self.assertTrue(any(r['config']['arp_reply_count'] < r['config']['arp_count']
                                 for r in rows))
         for label in (0, 1):
-            ratios = [r['inputs']['arp_reply_ratio'] for r in self.records if r['label'] == label]
+            ratios = [r['inputs']['arp_reply_ratio'] for r in self.records
+                      if r['label'] == label and r['inputs']['arp_reply_ratio'] is not None]
             self.assertTrue(any(x <= .5 for x in ratios))
             self.assertTrue(any(.5 < x < 1 for x in ratios))
 

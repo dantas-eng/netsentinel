@@ -74,8 +74,8 @@ _CONFLICT = (
 )
 
 SCENARIOS = (
-    Scenario("quiet_known_balanced", _quiet(1, 1), {"aa": Reputation.KNOWN}, {"aa": 100}, "confiável"),
-    Scenario("quiet_new_balanced", _quiet(1, 1), {"aa": Reputation.NEW}, {"aa": 100}, "desconhecido"),
+    Scenario("quiet_known_balanced", _quiet(2, 2), {"aa": Reputation.KNOWN}, {"aa": 100}, "confiável"),
+    Scenario("quiet_new_balanced", _quiet(2, 2), {"aa": Reputation.NEW}, {"aa": 100}, "desconhecido"),
     Scenario("reply_flood_new", _flood(), {"aa": Reputation.NEW}, {}, "suspeito"),
     Scenario("reply_flood_known", _flood(), {"aa": Reputation.KNOWN}, {}, "desconhecido"),
     Scenario(

@@ -113,6 +113,10 @@ class InferenceTests(unittest.TestCase):
     def test_missing_frequency_still_abstains(self):
         self.assertIsNone(infer(inputs(f=None, d=None)).score)
 
+    def test_known_warmup_without_any_measure_abstains(self):
+        # Conhecido sem conflito, frequência, desvio nem razão: abstém, não vira confiável.
+        self.assertIsNone(infer(inputs(c=None, f=None, r='known', d=None)).score)
+
     def test_r1_survives_all_other_missing(self):
         result = infer(inputs(c=0.5, f=None, r=None, d=None))
         self.assertGreaterEqual(result.score, 65)
@@ -269,3 +273,16 @@ class FeatureTests(unittest.TestCase):
                                       (Reputation.KNOWN, 'desconhecido')]:
             engine = FuzzyRiskStrategy(FixedReputation({'aa': reputation}), FixedBaseline({}))
             self.assertEqual(engine.classify(snapshot())['aa'].classification, expected)
+
+    def test_slow_new_attacker_below_mitigation_threshold(self):
+        # Limitação conhecida e aceita (ADR 0013): com 3 respostas na janela de 8 s,
+        # sem conflito nem baseline, a razão fica ausente (amostra mínima de 4) e o
+        # atacante novo pontua desconhecido, abaixo de 65, sem acionar a mitigação.
+        data = snapshot(observed_seconds=8,
+                        devices={'aa': dict(bytes=0, arp_requests=0, arp_replies=3)})
+        features = self.make_extractor(baseline=None).extract(data)['aa']
+        self.assertEqual(features.conflict, 0)
+        self.assertIsNone(features.arp_reply_ratio)
+        result = infer(features)
+        self.assertEqual(result.classification, 'desconhecido')
+        self.assertLess(result.score, 65)
