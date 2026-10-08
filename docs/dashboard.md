@@ -22,6 +22,9 @@ exibidas; não são substituídas por dados de demonstração.
 | Topologia | `/api/topology`; vis.js Network com nós identificados por MAC, cores da classificação recebida e conexões Ethernet observadas. Destinos sem origem observada e broadcast não recebem reputação inventada. Seleção abre detalhes quando existe registro no inventário. |
 | Dispositivos | `/api/devices`; score de risco, classificação, reputação manual, última observação e baseline em bytes/s. Score nulo permanece sem avaliação. |
 | Detalhes | Inputs do fuzzy, motivo do score nulo, confirmação/revogação com motivo e calibração via rotas existentes. Calibração mostra janelas aceitas de 0 a 5 e estado. Três superfícies novas no modal: (1) **Evidência observada** — protocolos, IPs reclamados e, quando finita, proporção de replies ARP, com nota de que protocolos/IPs não entram na inferência; (2) **Score no tempo** — sparkline de `GET /api/devices/<mac>/history?limit=200`, limiares 35/65 e empty-state textual; (3) **motivo do calibrate** desabilitado em `#calibrate-reason` (reputação, coleta em andamento ou fonte parada). |
+| Pacotes ARP | `/api/packets?latest=1&limit=500` na abertura e `after_id` na reconciliação; até 500 linhas, mais novas primeiro. Filtro por MAC/IP e "Só alegações falsas" consultam o servidor. Linha falsa tem faixa lateral e texto vermelho. Setas, Home/End e Enter navegam. |
+| Modal do pacote | `/api/packets/{id}`; título, hora, tamanho, origem → destino e veredito. Detalhes (árvore por camada) e bytes (offset, hex, ASCII) lado a lado com destaque cruzado campo↔byte; MAC e IP do remetente em vermelho quando a alegação é falsa. Anterior/Próximo e ←/→ percorrem a lista filtrada; Esc e Fechar devolvem o foco. |
+| Ver pacote | Em eventos `risk_evaluated` com ameaça, `threat_unmitigable` e no modal do dispositivo que originou alegação falsa; usa `/api/packets/match`. Sem quadro: "O quadro desta detecção não está mais guardado (retenção de 5 dias)." |
 | Eventos | `/api/events` paginado e Socket.IO; até 200 registros mais recentes, mais novo primeiro, detalhes JSON expansíveis. Ordenação/deduplicação por event_id, não pelo relógio do navegador. |
 | Auditoria | `/api/audit`; até 100 ações mais recentes com operador, MAC, motivo e instante. |
 | Estado | `/api/status`; ambiente, fonte em execução/parada, erro, janela de 8 s e última captura. Após duas janelas sem atualização, a interface alerta sobre dados antigos. Esse indicador não muda os parâmetros do motor. |
@@ -44,7 +47,8 @@ só avança com páginas REST; receber um ID maior por Socket.IO não pula event
 que ainda faltam. O histórico retido na tela tem limite de 200 itens; o banco
 continua sendo a fonte de histórico. No primeiro acesso o replay começa em zero.
 Isso é adequado ao ensaio MVP, mas um banco com muitos eventos aumenta o tempo
-de carga inicial. O modal lê a série de score em `GET /api/devices/<mac>/history`;
+de carga inicial. O modal lê a série de score em `GET /api/devices/<mac>/history`; a lista de pacotes busca só os
+quadros novos (`after_id`) na mesma reconciliação;
 isso não substitui o replay paginado de `/api/events`.
 
 Não há polling periódico de endpoints. O timer local apenas atualiza o aviso de

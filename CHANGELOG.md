@@ -3,6 +3,18 @@
 Versionamento semântico. As entregas anteriores à 0.4.0 cobriram captura,
 normalização, janela móvel e o motor fuzzy.
 
+## Não lançado — visualizador de pacotes ARP (08/10/2026)
+
+- Quadros ARP Ethernet/IPv4 guardados em `arp_frames` (até 128 bytes), com
+  retenção de 5 dias ou 20000 linhas (`PACKET_RETENTION_DAYS`, `PACKET_MAX_ROWS`).
+  Laboratório e fonte sintética produzem quadros reais (ADR 0014).
+- Dissecador no backend com intervalo de bytes por campo e veredito pelo
+  inventário de `trusted_bindings()`.
+- `GET /api/packets`, `/api/packets/{id}` e `/api/packets/match`.
+- Dashboard: seção Pacotes ARP e modal no estilo Wireshark, com destaque cruzado
+  campo↔byte, Anterior/Próximo e "Ver pacote" a partir das detecções.
+- `prune --confirm` também poda quadros. Rolagem horizontal no celular corrigida.
+
 ## Não lançado — preparação de fechamento (28/09/2026)
 
 - Render Free + Supabase Free escolhidos pelo grupo (ADR 0012); especificação
