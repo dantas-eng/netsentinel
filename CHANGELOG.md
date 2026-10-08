@@ -7,7 +7,8 @@ normalização, janela móvel e o motor fuzzy.
 
 - Quadros ARP Ethernet/IPv4 guardados em `arp_frames` (até 128 bytes), com
   retenção de 5 dias ou 20000 linhas (`PACKET_RETENTION_DAYS`, `PACKET_MAX_ROWS`).
-  Laboratório e fonte sintética produzem quadros reais (ADR 0014).
+  Laboratório e fonte sintética produzem quadros reais (ADR 0014). Teto de 500
+  quadros por janela na captura (`arp_frames_dropped`).
 - Dissecador no backend com intervalo de bytes por campo e veredito pelo
   inventário de `trusted_bindings()`.
 - `GET /api/packets`, `/api/packets/{id}` e `/api/packets/match`.

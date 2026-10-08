@@ -7,6 +7,9 @@ from netsentinel.capture.window import ObservationWindow
 from netsentinel.packets.dissect import MAX_FRAME_BYTES, dissect
 from scapy.layers.l2 import Ether
 
+# Teto por janela: uma inundação ARP não bloqueia a captura nem empurra a retenção inteira.
+MAX_FRAMES_PER_WINDOW = 500
+
 
 class CaptureService:
     def __init__(self, config, publish, clock=monotonic, source_factory=ScapySource):
@@ -15,6 +18,7 @@ class CaptureService:
         self.window = ObservationWindow(config.window_seconds, config.max_observations)
         self.unsupported_total = 0
         self.malformed_total = 0
+        self.arp_frames_dropped = 0
         self.started_at = None
         self.run_id = uuid4().hex
         self.arp_frames = []
@@ -35,6 +39,9 @@ class CaptureService:
             return
         self.window.add(observation, self.clock())
         if observation.protocol == "ARP":
+            if len(self.arp_frames) >= MAX_FRAMES_PER_WINDOW:
+                self.arp_frames_dropped += 1
+                return
             raw = bytes(packet[Ether])[:MAX_FRAME_BYTES]
             try:
                 dissect(raw)
@@ -54,7 +61,8 @@ class CaptureService:
                         warming_up=elapsed < self.config.window_seconds)
         snapshot.update(timestamp=time(), source="live", interface=self.config.interface,
                         unsupported_total=self.unsupported_total,
-                        malformed_total=self.malformed_total, arp_frames=self.arp_frames)
+                        malformed_total=self.malformed_total, arp_frames=self.arp_frames,
+                        arp_frames_dropped=self.arp_frames_dropped)
         self.arp_frames = []
         self.publish(snapshot)
 

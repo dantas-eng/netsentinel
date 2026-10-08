@@ -36,8 +36,11 @@ inventário. A captura descartava os bytes depois de extrair os metadados.
 
 - O veredito do modal e a detecção não divergem: os dois leem o mesmo inventário.
 - O volume é limitado nos dois sentidos (tempo e linhas), o que protege o plano
-  gratuito do Supabase. Uma detecção com mais de 5 dias perde o quadro; o
-  dashboard diz isso em vez de mostrar outro pacote.
+  gratuito do Supabase. Durante um ataque o limite de linhas chega antes dos 5
+  dias: cerca de 30 min na nuvem sintética (10 quadros por segundo) e poucos
+  minutos no laboratório a 50 pps. Detecção sem quadro guardado mostra essa
+  mensagem em vez de outro pacote. A captura guarda no máximo 500 quadros por
+  janela e conta o excedente em `arp_frames_dropped`.
 - O veredito é sobre o vínculo IP→MAC declarado no quadro. Ele não substitui o
   score fuzzy, que também pesa frequência, reputação e desvio de volume.
 - Sem PCAP, sem payload de outros protocolos e sem evento Socket.IO novo: a lista

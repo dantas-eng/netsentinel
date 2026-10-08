@@ -221,3 +221,24 @@ class ArpFrameCaptureTests(unittest.TestCase):
         service.ingest(arp())
         service.emit()
         self.assertEqual([f['raw'] for f in published[-1]['arp_frames']], [bytes(arp())])
+
+    def test_frames_beyond_window_cap_are_counted_not_kept(self):
+        from unittest.mock import patch
+        service, published = self.service()
+        with patch('netsentinel.capture.service.MAX_FRAMES_PER_WINDOW', 2):
+            for _ in range(3):
+                service.ingest(arp())
+        service.emit()
+        self.assertEqual((len(published[-1]['arp_frames']), published[-1]['arp_frames_dropped']), (2, 1))
+        service.emit()
+        self.assertEqual(published[-1]['arp_frames_dropped'], 1)
+
+    def test_cli_line_omits_frame_bytes(self):
+        import json
+        from netsentinel.capture.__main__ import line
+        service, published = self.service()
+        service.ingest(arp())
+        service.emit()
+        data = json.loads(line(published[-1]))
+        self.assertNotIn('arp_frames', data)
+        self.assertEqual(data['source'], 'live')

@@ -14,8 +14,8 @@ let epoch = 0, signedIn = false, socket = null, syncJob = null, dirty = false, r
 let devices = [], status = null, topology = {nodes: [], links: []}, selected = null;
 let evidenceEvents = [], lastMitigationError = 0, snapshot = null, snapshotID = 0;
 let graph, graphNodes, graphEdges, fitted = false, detailRequest = 0, calibration = null, history = null;
-let packets = [], packetRequest = 0, packetFocus = null, packet = null, restoreFocus = null, filterTimer;
-const MAX_PACKETS = 500, NOT_RETAINED = 'O quadro desta detecção não está mais guardado (retenção de 5 dias).';
+let packets = [], packetsKey = null, packetRequest = 0, packetFocus = null, packet = null, restoreFocus = null, filterTimer;
+const MAX_PACKETS = 500, NOT_RETAINED = 'O quadro desta detecção não está mais guardado (retenção: até 5 dias ou 20000 quadros).';
 const feed = new EventFeed(acceptEvent);
 const fmt = value => typeof value === 'number' && Number.isFinite(value) ? value.toLocaleString('pt-BR', {maximumFractionDigits: 2}) : '—';
 const when = value => typeof value === 'number' ? new Date(value * 1000).toLocaleString('pt-BR') : '—';
@@ -39,7 +39,7 @@ function endSession(text = '') {
   feed.reset(); devices = []; status = null; evidenceEvents = []; lastMitigationError = 0;
   snapshot = null; snapshotID = 0; selected = null; calibration = null; history = null; detailRequest++;
   graph?.destroy(); graph = null; fitted = false;
-  packets = []; packetRequest++; packet = null; packetFocus = null; $('packet-dialog').close();
+  packets = []; packetsKey = null; packetRequest++; packet = null; packetFocus = null; $('packet-dialog').close();
   $('device-dialog').close(); $('workspace').hidden = true; $('login-panel').hidden = false;
   for (const id of ['devices', 'events', 'audit', 'detail-data', 'packets', 'packet-tree', 'packet-bytes']) $(id).replaceChildren();
   $('mode').textContent = 'Ambiente não consultado'; $('password').value = '';
@@ -339,14 +339,15 @@ function packetQuery() {
 }
 // Reconciliação: só os quadros novos; filtro trocado ou lacuna grande recarrega os 500 mais novos.
 async function loadPackets(reset = false) {
-  const requestID = ++packetRequest, version = epoch, params = packetQuery();
-  const last = reset ? 0 : packets.at(-1)?.id || 0;
+  const requestID = ++packetRequest, version = epoch, params = packetQuery(), key = params.toString();
+  // Lista montada com outro filtro (ou reload ainda em voo) nunca recebe só o incremento.
+  const last = reset || key !== packetsKey ? 0 : packets.at(-1)?.id || 0;
   params.set(last ? 'after_id' : 'latest', last ? String(last) : '1');
   try {
     let {packets: incoming} = await api.request(`/api/packets?${params}`);
     if (requestID !== packetRequest || epoch !== version) return;
     if (last && incoming.length === MAX_PACKETS) return loadPackets(true);
-    packets = (last ? [...packets, ...incoming] : incoming).slice(-MAX_PACKETS);
+    packets = (last ? [...packets, ...incoming] : incoming).slice(-MAX_PACKETS); packetsKey = key;
     renderPackets();
   } catch (error) { if (epoch === version && requestID === packetRequest) fail(error); }
 }

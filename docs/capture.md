@@ -33,7 +33,7 @@ fonte sintética usada na nuvem se identifica separadamente.
 | `incomplete` | Houve descarte por capacidade que ainda afeta a janela atual. O motor fuzzy trata as entradas desse snapshot como ausentes. |
 | `evicted_total` | Descartes acumulados pela capacidade da aplicação. Não mede perdas no kernel, no switch ou no adaptador. |
 | `unsupported_total`, `malformed_total` | Observações que não foram aproveitadas. |
-| `arp_frames` | Bytes dos quadros ARP Ethernet/IPv4 da janela (até 128 por quadro), com timestamp. O backend retira a lista antes de persistir o snapshot e grava em `arp_frames` (ADR 0014); outros quadros não guardam bytes. Na saída JSON desta CLI os bytes não aparecem. |
+| `arp_frames` | Bytes dos quadros ARP Ethernet/IPv4 da janela (até 128 por quadro), com timestamp. O backend retira a lista antes de persistir o snapshot e grava em `arp_frames` (ADR 0014); outros quadros não guardam bytes. No máximo 500 por janela; `arp_frames_dropped` acumula o excedente. A saída JSON desta CLI omite os bytes. |
 
 Probes com IP de origem `0.0.0.0` não contam como afirmação de propriedade de
 endereço.

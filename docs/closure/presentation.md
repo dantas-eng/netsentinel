@@ -66,6 +66,7 @@ integrador; o limite de 3 minutos do regulamento continua valendo para a ExpoTec
 21. **Por que guardar só ARP e por quanto tempo?** ARP não carrega dado de
     usuário e é o quadro que prova a alegação falsa. Até 128 bytes por quadro,
     5 dias ou 20000 linhas, o que vier primeiro, para caber no plano gratuito.
+    Em ataque, as 20000 linhas acabam antes: ~30 min na nuvem, minutos no lab.
     O veredito do modal usa o mesmo inventário do detector.
 
 ## Rodada de estudo
