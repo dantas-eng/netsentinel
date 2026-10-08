@@ -1,5 +1,6 @@
 """REST autenticada e Observer Socket.IO; criar app não abre captura nem agente."""
 from datetime import timedelta
+import os
 import hmac
 from secrets import token_urlsafe
 from threading import RLock
@@ -16,6 +17,17 @@ from netsentinel.repositories.store import Repository, DomainConflict
 from netsentinel.security.strategy import VictimAgentMitigationStrategy
 from netsentinel.services.pipeline import BackendPipeline
 from netsentinel.services.synthetic import SyntheticIdentity, SyntheticMitigation
+
+
+def packet_retention():
+    """(dias, linhas) de PACKET_RETENTION_DAYS e PACKET_MAX_ROWS; inteiros >= 1 (ADR 0014)."""
+    values = []
+    for name, default in (('PACKET_RETENTION_DAYS', '5'), ('PACKET_MAX_ROWS', '20000')):
+        raw = os.environ.get(name, default)
+        if not raw.isdigit() or int(raw) < 1:
+            raise ValueError(f'{name} deve ser inteiro >= 1.')
+        values.append(int(raw))
+    return tuple(values)
 
 
 def create_app(settings: Settings, lab_config=None, database=None, mitigation=None, clock=monotonic):
@@ -36,7 +48,7 @@ def create_app(settings: Settings, lab_config=None, database=None, mitigation=No
     identity = lab_config if settings.mode == 'lab' else SyntheticIdentity()
     strategy = (mitigation if mitigation is not None else VictimAgentMitigationStrategy(lab_config)) \
         if settings.mode == 'lab' else SyntheticMitigation(identity, clock)
-    pipeline = BackendPipeline(repository, bus, identity, strategy, settings.mode)
+    pipeline = BackendPipeline(repository, bus, identity, strategy, settings.mode, packet_retention())
     app.extensions.update(database=db, repository=repository, event_bus=bus,
                           pipeline=pipeline, settings=settings)
     clients, client_lock = {}, RLock()

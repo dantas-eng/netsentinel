@@ -116,9 +116,19 @@ class BackendTests(unittest.TestCase):
             create_app(settings('sqlite://',mode='cloud'),database=self.db,mitigation=MagicMock())
 
     def test_arp_frames_are_not_persisted_inside_snapshot(self):
-        frame = dict(timestamp=1700000008.0, raw=bytes(60))
-        self.pipeline.consume(snapshot(arp_frames=[frame]))
+        frame = dict(timestamp=__import__('time').time())
+        from tests.unit.test_packets import REPLY
+        self.pipeline.consume(snapshot(arp_frames=[dict(frame, raw=REPLY)]))
         self.assertNotIn('arp_frames', self.repo.latest_snapshot())
+        self.assertEqual([f['sender_mac'] for f in self.repo.arp_frames()], ['02:00:00:00:00:30'])
+
+    def test_packet_retention_settings_must_be_positive_integers(self):
+        for name, value in (('PACKET_RETENTION_DAYS', '0'), ('PACKET_MAX_ROWS', 'abc')):
+            with self.subTest(name=name), patch.dict('os.environ', {name: value}):
+                with self.assertRaises(ValueError):
+                    create_app(settings('sqlite://'), config(self.temp.name, hostonly_interface='enp0s8',
+                               hostonly_ip='192.168.56.40', hostonly_cidr='192.168.56.0/24'),
+                               self.db, MagicMock())
 
     def test_source_mode_mismatch_is_rejected(self):
         with self.assertRaises(ValueError):
