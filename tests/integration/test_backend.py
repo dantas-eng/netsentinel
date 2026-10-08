@@ -115,6 +115,11 @@ class BackendTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             create_app(settings('sqlite://',mode='cloud'),database=self.db,mitigation=MagicMock())
 
+    def test_arp_frames_are_not_persisted_inside_snapshot(self):
+        frame = dict(timestamp=1700000008.0, raw=bytes(60))
+        self.pipeline.consume(snapshot(arp_frames=[frame]))
+        self.assertNotIn('arp_frames', self.repo.latest_snapshot())
+
     def test_source_mode_mismatch_is_rejected(self):
         with self.assertRaises(ValueError):
             self.pipeline.consume(snapshot(source='synthetic'))

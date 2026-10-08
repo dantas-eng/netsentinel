@@ -4,6 +4,8 @@ from uuid import uuid4
 from netsentinel.capture.normalizer import normalize
 from netsentinel.capture.scapy_source import ScapySource
 from netsentinel.capture.window import ObservationWindow
+from netsentinel.packets.dissect import MAX_FRAME_BYTES, dissect
+from scapy.layers.l2 import Ether
 
 
 class CaptureService:
@@ -15,6 +17,7 @@ class CaptureService:
         self.malformed_total = 0
         self.started_at = None
         self.run_id = uuid4().hex
+        self.arp_frames = []
 
     def _start_clock(self):
         if self.started_at is None:
@@ -31,6 +34,14 @@ class CaptureService:
             self.unsupported_total += 1
             return
         self.window.add(observation, self.clock())
+        if observation.protocol == "ARP":
+            raw = bytes(packet[Ether])[:MAX_FRAME_BYTES]
+            try:
+                dissect(raw)
+            except ValueError:
+                self.malformed_total += 1
+                return
+            self.arp_frames.append(dict(timestamp=observation.timestamp, raw=raw))
 
     def emit(self):
         self._start_clock()
@@ -43,7 +54,8 @@ class CaptureService:
                         warming_up=elapsed < self.config.window_seconds)
         snapshot.update(timestamp=time(), source="live", interface=self.config.interface,
                         unsupported_total=self.unsupported_total,
-                        malformed_total=self.malformed_total)
+                        malformed_total=self.malformed_total, arp_frames=self.arp_frames)
+        self.arp_frames = []
         self.publish(snapshot)
 
     def run(self, stop):

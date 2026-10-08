@@ -24,6 +24,8 @@ class BackendPipeline:
         if snapshot['source'] != expected:
             raise ValueError('Fonte de dados incompatível com o ambiente.')
         with self.lock:
+            # Bytes dos quadros ARP vão para tabela própria, nunca para o JSON do snapshot.
+            self.arp_frames = snapshot.pop('arp_frames', [])
             self.repository.save_snapshot(snapshot)
             self.latest = snapshot
             # Classificar com o baseline anterior: nunca treinar com a janela e

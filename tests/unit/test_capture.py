@@ -183,3 +183,41 @@ class CaptureTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class ArpFrameCaptureTests(unittest.TestCase):
+    def service(self):
+        published = []
+        return CaptureService(CaptureConfig('lab0', 8, 100, True), published.append,
+                              clock=lambda: 100.0), published
+
+    def test_arp_frames_travel_with_snapshot_and_reset(self):
+        service, published = self.service()
+        service.ingest(arp())
+        service.ingest(Ether(src=A, dst=B) / IP(src='192.0.2.1', dst='192.0.2.2') / ICMP())
+        service.emit()
+        frames = published[-1]['arp_frames']
+        self.assertEqual(len(frames), 1)
+        self.assertEqual(frames[0]['raw'], bytes(arp()))
+        self.assertLessEqual(len(frames[0]['raw']), 128)
+        service.emit()
+        self.assertEqual(published[-1]['arp_frames'], [])
+
+    def test_non_ethernet_ipv4_arp_is_not_kept(self):
+        service, published = self.service()
+        service.ingest(Ether(bytes(Ether(src=A, dst=B) / ARP(hwtype=6, hwsrc=A, psrc='192.0.2.1'))))
+        service.emit()
+        self.assertEqual(published[-1]['arp_frames'], [])
+
+    def test_frame_longer_than_limit_is_cut(self):
+        service, published = self.service()
+        service.ingest(Ether(bytes(arp() / Raw(b'x' * 200))))
+        service.emit()
+        self.assertEqual(len(published[-1]['arp_frames'][0]['raw']), 128)
+
+    def test_truncated_arp_is_not_kept_and_capture_continues(self):
+        service, published = self.service()
+        service.ingest(Ether(bytes(arp())[:30]))
+        service.ingest(arp())
+        service.emit()
+        self.assertEqual([f['raw'] for f in published[-1]['arp_frames']], [bytes(arp())])
