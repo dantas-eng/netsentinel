@@ -1,4 +1,4 @@
-import {Api, ApiError, EventFeed, eventNames, graphData, riskStyle, counterInterval, sparkline} from './core.mjs';
+import {Api, ApiError, EventFeed, eventNames, graphData, riskStyle, counterInterval, sparkline, hexRows, byteOwners} from './core.mjs';
 
 const $ = id => document.getElementById(id);
 const api = new Api();
@@ -14,6 +14,8 @@ let epoch = 0, signedIn = false, socket = null, syncJob = null, dirty = false, r
 let devices = [], status = null, topology = {nodes: [], links: []}, selected = null;
 let evidenceEvents = [], lastMitigationError = 0, snapshot = null, snapshotID = 0;
 let graph, graphNodes, graphEdges, fitted = false, detailRequest = 0, calibration = null, history = null;
+let packets = [], packetsKey = null, packetRequest = 0, packetFocus = null, packet = null, restoreFocus = null, filterTimer;
+const MAX_PACKETS = 500, NOT_RETAINED = 'O quadro desta detecção não está mais guardado (retenção: até 5 dias ou 20000 quadros).';
 const feed = new EventFeed(acceptEvent);
 const fmt = value => typeof value === 'number' && Number.isFinite(value) ? value.toLocaleString('pt-BR', {maximumFractionDigits: 2}) : '—';
 const when = value => typeof value === 'number' ? new Date(value * 1000).toLocaleString('pt-BR') : '—';
@@ -37,8 +39,9 @@ function endSession(text = '') {
   feed.reset(); devices = []; status = null; evidenceEvents = []; lastMitigationError = 0;
   snapshot = null; snapshotID = 0; selected = null; calibration = null; history = null; detailRequest++;
   graph?.destroy(); graph = null; fitted = false;
+  packets = []; packetsKey = null; packetRequest++; packet = null; packetFocus = null; $('packet-dialog').close();
   $('device-dialog').close(); $('workspace').hidden = true; $('login-panel').hidden = false;
-  for (const id of ['devices', 'events', 'audit', 'detail-data']) $(id).replaceChildren();
+  for (const id of ['devices', 'events', 'audit', 'detail-data', 'packets', 'packet-tree', 'packet-bytes']) $(id).replaceChildren();
   $('mode').textContent = 'Ambiente não consultado'; $('password').value = '';
   message(text, 'login-message');
 }
@@ -101,6 +104,7 @@ async function synchronize() {
       [topology, {devices}, , status] = values;
       updateGraph(); renderDevices(); renderEvents(); renderAudit(values[2].audit); renderStatus(); renderEvidence();
       message('');
+      await loadPackets();
       if ($('device-dialog').open) await loadDetails();
     } catch (error) { if (epoch === version) fail(error); }
     finally {
@@ -164,7 +168,7 @@ function renderDevices() {
   $('device-count').textContent = `(${rows.length})`;
 }
 function renderEvents() {
-  const events = feed.newest();
+  const focusKey = keyedFocus(), events = feed.newest();
   $('history-note').textContent = `Até 200 eventos mais recentes · ordem do registro, mais novo primeiro · cursor recuperado: ${feed.cursor}`;
   const expanded = new Set([...$('events').querySelectorAll('details[open]')].map(el => el.dataset.id));
   $('events').replaceChildren(...events.map(e => {
@@ -176,9 +180,13 @@ function renderEvents() {
     const populate = () => { if (detail.open && !detail.querySelector('pre')) detail.append(node('pre', JSON.stringify(e, null, 2))); };
     detail.addEventListener('toggle', populate);
     if (expanded.has(detail.dataset.id)) { detail.open = true; populate(); }
-    li.append(time, detail); return li;
+    li.append(time, detail);
+    const claims = e.event === 'threat_unmitigable' ? [e] : e.event === 'risk_evaluated' ? e.threats || [] : [];
+    for (const claim of claims) if (claim.mac && claim.spoofed_ips?.[0]) li.append(viewPacketButton(claim, e, 'feedback'));
+    return li;
   }));
   $('events-empty').hidden = events.length > 0;
+  refocusKey(focusKey);
 }
 function renderAudit(audits) {
   $('audit').replaceChildren(...audits.map(a => {
@@ -295,7 +303,15 @@ function renderDetails() {
     ['Baseline', d.baseline_bps == null ? 'Indisponível' : `${fmt(d.baseline_bps)} bytes/s`]];
   const dl = node('dl', undefined, 'facts');
   for (const [label, value] of entries) { const row = node('div'); row.append(node('dt', label), node('dd', value)); dl.append(row); }
-  $('detail-data').replaceChildren(dl, renderObserved(d), renderScoreHistory());
+  const parts = [dl, renderObserved(d), renderScoreHistory()];
+  const claim = feed.newest().find(e => e.event === 'risk_evaluated' && e.threats?.some(t => t.mac === d.mac));
+  if (claim) {
+    const section = node('section', undefined, 'detail-section'), threat = claim.threats.find(t => t.mac === d.mac);
+    section.append(node('h3', 'Alegação falsa'), node('p', `Origem de alegação falsa sobre ${threat.spoofed_ips.join(', ')} em ${when(claim.timestamp)}.`, 'muted'), viewPacketButton(threat, claim, 'detail-message'));
+    parts.push(section);
+  }
+  const focusKey = keyedFocus();
+  $('detail-data').replaceChildren(...parts); refocusKey(focusKey);
   $('reputation-help').textContent = d.reputation === 'known' ? 'Revogar retorna este MAC a Novo e cancela a calibração ativa.' : 'Confirme somente após reconhecer este dispositivo. Não há promoção automática por score.';
   $('reputation-submit').textContent = d.reputation === 'known' ? 'Revogar reconhecimento' : 'Confirmar dispositivo';
   const names = {collecting: 'Coletando', completed: 'Concluída', cancelled: 'Cancelada', interrupted: 'Interrompida'};
@@ -314,6 +330,156 @@ function renderDetails() {
   reason.textContent = blocked;
   reason.hidden = !blocked;
 }
+function packetQuery() {
+  const params = new URLSearchParams({limit: String(MAX_PACKETS)});
+  const q = $('packet-filter').value.trim().toLowerCase();
+  if (q) params.set('q', q);
+  if ($('packet-spoofed').checked) params.set('spoofed', '1');
+  return params;
+}
+// Reconciliação: só os quadros novos; filtro trocado ou lacuna grande recarrega os 500 mais novos.
+async function loadPackets(reset = false) {
+  const requestID = ++packetRequest, version = epoch, params = packetQuery(), key = params.toString();
+  // Lista montada com outro filtro (ou reload ainda em voo) nunca recebe só o incremento.
+  const last = reset || key !== packetsKey ? 0 : packets.at(-1)?.id || 0;
+  params.set(last ? 'after_id' : 'latest', last ? String(last) : '1');
+  try {
+    let {packets: incoming} = await api.request(`/api/packets?${params}`);
+    if (requestID !== packetRequest || epoch !== version) return;
+    if (last && incoming.length === MAX_PACKETS) return loadPackets(true);
+    packets = (last ? [...packets, ...incoming] : incoming).slice(-MAX_PACKETS); packetsKey = key;
+    renderPackets();
+  } catch (error) { if (epoch === version && requestID === packetRequest) fail(error); }
+}
+function shortTime(ts) { return new Date(ts * 1000).toLocaleTimeString('pt-BR', {hour12: false}); }
+function kind(opcode) { return opcode === 1 ? 'request' : opcode === 2 ? 'reply' : `opcode ${opcode}`; }
+function renderPackets() {
+  const focused = document.activeElement?.closest?.('#packets') ? packetFocus : null;
+  if (!packets.some(p => p.id === packetFocus)) packetFocus = packets.at(-1)?.id ?? null;
+  $('packets').replaceChildren(...packets.toReversed().map(p => {
+    const li = node('li'), button = node('button', undefined, `packet-row${p.spoofed ? ' spoofed' : ''}`);
+    button.type = 'button'; button.dataset.id = String(p.id); button.tabIndex = p.id === packetFocus ? 0 : -1;
+    button.setAttribute('aria-label', `${p.spoofed ? 'Alegação falsa. ' : ''}Pacote ${p.id}, ${shortTime(p.captured_at)}, ARP ${kind(p.opcode)}, ${p.summary}`);
+    const cells = [String(p.id), shortTime(p.captured_at), p.eth_src, p.eth_dst === 'ff:ff:ff:ff:ff:ff' ? 'Broadcast' : p.eth_dst, kind(p.opcode), String(p.length), p.summary];
+    button.append(...cells.map(text => node('span', text)));
+    button.addEventListener('click', () => openPacketById(p.id, () => moveFocus(packetRow(packet?.id) || packetRow(p.id))));
+    li.append(button); return li;
+  }));
+  $('packets-empty').hidden = packets.length > 0;
+  $('packet-count').textContent = `(${packets.length}${packets.length === MAX_PACKETS ? ', mais novos' : ''})`;
+  if (focused !== null) packetRow(focused)?.focus();
+  if (packet) updatePacketNav();
+}
+function packetRow(id) { return $('packets').querySelector(`button[data-id="${id}"]`); }
+function moveFocus(row) {
+  if (!row) return;
+  for (const other of $('packets').querySelectorAll('button[tabindex="0"]')) other.tabIndex = -1;
+  row.tabIndex = 0; packetFocus = Number(row.dataset.id); row.focus(); row.scrollIntoView({block: 'nearest'});
+}
+$('packets').addEventListener('keydown', event => {
+  const rows = [...$('packets').querySelectorAll('button')], at = rows.indexOf(document.activeElement);
+  const target = {ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: rows.length - 1}[event.key];
+  if (target === undefined || at < 0) return;
+  event.preventDefault(); moveFocus(rows[Math.max(0, Math.min(rows.length - 1, target))]);
+});
+function keyedFocus() { return document.activeElement?.classList.contains('view-packet') ? document.activeElement.dataset.key : null; }
+function refocusKey(key) { if (key) document.querySelector(`.view-packet[data-key="${CSS.escape(key)}"]`)?.focus(); }
+function viewPacketButton(claim, event, messageID) {
+  const button = node('button', `Ver pacote de ${claim.mac}`, 'view-packet'); button.type = 'button';
+  // Histórico e modal são redesenhados a cada evento; o foco volta pela chave, não pela referência.
+  button.dataset.key = `${messageID}:${event.event_id}:${claim.mac}`;
+  const refocus = () => refocusKey(button.dataset.key);
+  button.addEventListener('click', async () => {
+    const version = epoch, params = new URLSearchParams({mac: claim.mac, ip: claim.spoofed_ips[0], before: String(event.timestamp)});
+    try { const detail = await api.request(`/api/packets/match?${params}`); if (epoch === version) showPacket(detail, refocus); }
+    catch (error) { if (epoch !== version) return; error.status === 404 ? message(NOT_RETAINED, messageID) : fail(error, messageID); }
+  });
+  return button;
+}
+async function openPacketById(id, refocus) {
+  const version = epoch;
+  try { const detail = await api.request(`/api/packets/${id}`); if (epoch === version) showPacket(detail, refocus); }
+  catch (error) { if (epoch !== version) return; error.status === 404 ? message('Este quadro saiu da retenção. Atualize a lista.') : fail(error); }
+}
+const verdictText = {
+  spoofed_trusted_ip: (p, v) => `Alegação falsa: o inventário liga ${p.sender_ip} a ${v.expected_mac}, mas este quadro diz ${p.sender_mac}.`,
+  matches_inventory: p => `Consistente com o inventário: ${p.sender_ip} pertence a ${p.sender_mac}.`,
+  ip_not_in_inventory: p => `${p.sender_ip} está fora do inventário; não há vínculo para comparar.`,
+  probe: () => 'Sonda ARP (remetente 0.0.0.0): não alega nenhum endereço.'};
+const FALSE_FIELDS = new Set(['MAC do remetente', 'IP do remetente']);
+function showPacket(detail, refocus) {
+  packet = detail;
+  if (refocus) restoreFocus = refocus;
+  $('packet-title').textContent = `Pacote ${detail.id}, ARP ${kind(detail.opcode)}`;
+  $('packet-subtitle').textContent = `${when(detail.captured_at)} · ${detail.length} bytes · ${detail.eth_src} → ${detail.eth_dst}`;
+  const v = detail.verdict;
+  $('packet-verdict').textContent = (verdictText[v.reason] || (() => v.reason))(detail, v);
+  $('packet-verdict').className = `verdict ${v.spoofed ? 'danger' : v.reason === 'matches_inventory' ? 'safe' : ''}`;
+  const isFalse = field => v.spoofed && FALSE_FIELDS.has(field.name);
+  $('packet-tree').replaceChildren(...detail.layers.map((layer, index) => {
+    const block = node('details'); block.open = true;
+    block.append(node('summary', layer.name));
+    for (const field of layer.fields) {
+      const button = node('button', undefined, `field${isFalse(field) ? ' false' : ''}`); button.type = 'button';
+      button.append(node('span', `${field.name}: `, 'muted'), node('span', field.value));
+      button.dataset.key = `${index}:${field.name}:${field.start}`;
+      button.setAttribute('aria-label', `${field.name}: ${field.value}, bytes ${field.start} a ${field.end - 1}`);
+      for (const type of ['focus', 'mouseenter', 'click']) button.addEventListener(type, () => highlight(index, field));
+      block.append(button);
+    }
+    return block;
+  }));
+  const owners = byteOwners(detail.layers, detail.length);
+  $('packet-bytes').replaceChildren(...hexRows(detail.raw_hex).map(row => {
+    const line = node('div', undefined, 'byte-row'), hex = node('span', undefined, 'hex'), ascii = node('span', undefined, 'ascii');
+    for (const byte of row.bytes) {
+      const owner = owners[byte.index], cls = `byte${owner && isFalse(owner.field) ? ' false' : ''}`;
+      for (const [group, text] of [[hex, byte.hex], [ascii, byte.ascii]]) {
+        const span = node('span', text, cls); span.dataset.index = String(byte.index);
+        if (owner) span.addEventListener('mouseenter', () => highlight(owner.layer, owner.field));
+        if (owner) span.addEventListener('click', () => { highlight(owner.layer, owner.field); fieldButton(owner.layer, owner.field)?.focus(); });
+        group.append(span);
+      }
+    }
+    line.append(node('span', row.offset, 'offset'), hex, ascii); return line;
+  }));
+  $('packet-bytes').setAttribute('aria-label', `${detail.length} bytes do quadro em hexadecimal e ASCII`);
+  updatePacketNav();
+  if (!$('packet-dialog').open) $('packet-dialog').showModal();
+}
+function updatePacketNav() {
+  const at = packets.findIndex(p => p.id === packet?.id);
+  $('packet-prev').disabled = at <= 0; $('packet-next').disabled = at < 0 || at === packets.length - 1;
+}
+function fieldButton(layer, field) { return $('packet-tree').querySelector(`button[data-key="${CSS.escape(`${layer}:${field.name}:${field.start}`)}"]`); }
+function highlight(layer, field) {
+  for (const el of $('packet-dialog').querySelectorAll('.active')) el.classList.remove('active');
+  fieldButton(layer, field)?.classList.add('active');
+  for (const span of $('packet-bytes').querySelectorAll('.byte')) {
+    const index = Number(span.dataset.index);
+    if (index >= field.start && index < field.end) span.classList.add('active');
+  }
+}
+function stepPacket(delta) {
+  const at = packets.findIndex(p => p.id === packet?.id), next = packets[at + delta];
+  if (at < 0 || !next) return;
+  packetFocus = next.id; openPacketById(next.id);
+}
+$('packet-prev').addEventListener('click', () => stepPacket(-1));
+$('packet-next').addEventListener('click', () => stepPacket(1));
+$('close-packet').addEventListener('click', () => $('packet-dialog').close());
+$('packet-dialog').addEventListener('keydown', event => {
+  if (event.target.matches('input, textarea')) return;
+  if (event.key === 'ArrowLeft') { event.preventDefault(); stepPacket(-1); }
+  if (event.key === 'ArrowRight') { event.preventDefault(); stepPacket(1); }
+});
+$('packet-dialog').addEventListener('close', () => {
+  // Aberto pela lista: foco na linha do pacote exibido por último; senão, no botão que abriu.
+  restoreFocus?.(); packet = null; restoreFocus = null;
+});
+for (const [id, type] of [['packet-filter', 'input'], ['packet-spoofed', 'change']]) $(id).addEventListener(type, () => {
+  clearTimeout(filterTimer); filterTimer = setTimeout(() => { if (signedIn) loadPackets(true); }, 250);
+});
 $('login-form').addEventListener('submit', async event => {
   event.preventDefault(); $('login-button').disabled = true; message('Entrando…', 'login-message');
   try {

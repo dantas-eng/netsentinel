@@ -1,5 +1,5 @@
 """Schema compartilhado SQLite/Postgres; alterações são feitas via Alembic."""
-from sqlalchemy import JSON, Float, ForeignKey, Integer, String
+from sqlalchemy import JSON, Float, ForeignKey, Integer, LargeBinary, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -58,3 +58,19 @@ class LatestSnapshot(Base):
     __tablename__ = 'latest_snapshot'
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+
+
+class ArpFrame(Base):
+    __tablename__ = 'arp_frames'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    captured_at: Mapped[float] = mapped_column(Float, nullable=False, index=True)
+    capture_run_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    source: Mapped[str] = mapped_column(String(16), nullable=False)
+    eth_src: Mapped[str] = mapped_column(String(17), nullable=False, index=True)
+    eth_dst: Mapped[str] = mapped_column(String(17), nullable=False)
+    opcode: Mapped[int] = mapped_column(Integer, nullable=False)
+    sender_mac: Mapped[str] = mapped_column(String(17), nullable=False)
+    sender_ip: Mapped[str] = mapped_column(String(15), nullable=False, index=True)
+    target_mac: Mapped[str] = mapped_column(String(17), nullable=False)
+    target_ip: Mapped[str] = mapped_column(String(15), nullable=False)
+    raw: Mapped[bytes] = mapped_column(LargeBinary(128), nullable=False)

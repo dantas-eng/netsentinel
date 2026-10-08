@@ -1,5 +1,8 @@
 """REST autenticada e Observer Socket.IO; criar app não abre captura nem agente."""
 from datetime import timedelta
+import os
+from ipaddress import IPv4Address
+from math import isfinite
 import hmac
 from secrets import token_urlsafe
 from threading import RLock
@@ -13,9 +16,21 @@ from netsentinel.api.settings import Settings
 from netsentinel.events.bus import EventBus
 from netsentinel.repositories.database import Database
 from netsentinel.repositories.store import Repository, DomainConflict
+from netsentinel.security.config import validate_mac
 from netsentinel.security.strategy import VictimAgentMitigationStrategy
 from netsentinel.services.pipeline import BackendPipeline
 from netsentinel.services.synthetic import SyntheticIdentity, SyntheticMitigation
+
+
+def packet_retention():
+    """(dias, linhas) de PACKET_RETENTION_DAYS e PACKET_MAX_ROWS; inteiros >= 1 (ADR 0014)."""
+    values = []
+    for name, default in (('PACKET_RETENTION_DAYS', '5'), ('PACKET_MAX_ROWS', '20000')):
+        raw = os.environ.get(name, default)
+        if not raw.isdigit() or int(raw) < 1:
+            raise ValueError(f'{name} deve ser inteiro >= 1.')
+        values.append(int(raw))
+    return tuple(values)
 
 
 def create_app(settings: Settings, lab_config=None, database=None, mitigation=None, clock=monotonic):
@@ -36,7 +51,7 @@ def create_app(settings: Settings, lab_config=None, database=None, mitigation=No
     identity = lab_config if settings.mode == 'lab' else SyntheticIdentity()
     strategy = (mitigation if mitigation is not None else VictimAgentMitigationStrategy(lab_config)) \
         if settings.mode == 'lab' else SyntheticMitigation(identity, clock)
-    pipeline = BackendPipeline(repository, bus, identity, strategy, settings.mode)
+    pipeline = BackendPipeline(repository, bus, identity, strategy, settings.mode, packet_retention())
     app.extensions.update(database=db, repository=repository, event_bus=bus,
                           pipeline=pipeline, settings=settings)
     clients, client_lock = {}, RLock()
@@ -196,6 +211,34 @@ def create_app(settings: Settings, lab_config=None, database=None, mitigation=No
         if not 1 <= limit <= 500:
             raise ValueError('Paginação inválida.')
         return jsonify(history=repository.risk_history(mac, limit))
+
+    @app.get('/api/packets')
+    def packets():
+        args = request.args
+        query = args.get('q') or None
+        if query is not None and len(query) > 64:
+            raise ValueError('Busca limitada a 64 caracteres.')
+        for flag in ('spoofed', 'latest'):
+            if args.get(flag, '0') not in ('0', '1'):
+                raise ValueError(f'{flag} deve ser 0 ou 1.')
+        return jsonify(packets=repository.arp_frames(
+            int(args.get('after_id', 0)), int(args.get('limit', 100)), args.get('spoofed') == '1',
+            query, identity.trusted_bindings(), latest=args.get('latest') == '1'))
+
+    @app.get('/api/packets/<int:frame_id>')
+    def packet(frame_id):
+        item = repository.arp_frame(frame_id, identity.trusted_bindings())
+        return jsonify(item) if item else (jsonify(error='not_found'), 404)
+
+    @app.get('/api/packets/match')
+    def packet_match():
+        mac = validate_mac(request.args.get('mac', ''))
+        ip = str(IPv4Address(request.args.get('ip', '')))
+        before = float(request.args.get('before', ''))
+        if not isfinite(before):
+            raise ValueError('before deve ser um instante finito.')
+        item = repository.match_arp_frame(mac, ip, before, identity.trusted_bindings())
+        return jsonify(item) if item else (jsonify(error='packet_not_retained'), 404)
 
     @app.get('/api/audit')
     def audits():

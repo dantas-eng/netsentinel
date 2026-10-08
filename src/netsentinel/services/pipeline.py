@@ -6,8 +6,9 @@ from netsentinel.security.demo import SecurityDemo
 
 
 class BackendPipeline:
-    def __init__(self, repository, bus, identity, mitigation, mode):
+    def __init__(self, repository, bus, identity, mitigation, mode, packet_retention=(5, 20000)):
         self.repository, self.bus, self.mode = repository, bus, mode
+        self.packet_retention = packet_retention
         self.lock = RLock()
         self.latest = None
         self.security = SecurityDemo(identity, FuzzyRiskStrategy(repository, repository),
@@ -24,7 +25,11 @@ class BackendPipeline:
         if snapshot['source'] != expected:
             raise ValueError('Fonte de dados incompatível com o ambiente.')
         with self.lock:
+            # Bytes dos quadros ARP vão para tabela própria, nunca para o JSON do snapshot.
+            frames = snapshot.pop('arp_frames', [])
             self.repository.save_snapshot(snapshot)
+            self.repository.save_arp_frames(frames, snapshot['capture_run_id'], snapshot['source'],
+                                            *self.packet_retention)
             self.latest = snapshot
             # Classificar com o baseline anterior: nunca treinar com a janela e
             # compará-la imediatamente contra um baseline que já a contém.
