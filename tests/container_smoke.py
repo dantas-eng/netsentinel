@@ -41,11 +41,13 @@ def main():
         status, session = request('POST', '/api/auth/login',
                                   {'username': 'operador', 'password': password}, result['csrf_token'])
         assert status == 200
-        for path in ('topology', 'devices', 'events', 'audit', 'status'):
+        for path in ('topology', 'devices', 'events', 'audit', 'status', 'packets'):
             status, data = request('GET', '/api/' + path)
             assert status == 200, path
             if path == 'events':
                 assert data['events'] and all(e['source'] == 'synthetic' for e in data['events'])
+            if path == 'packets':
+                assert data['packets'], 'fonte sintética deveria gravar quadros ARP'
             if path == 'status':
                 assert data['mode'] == 'cloud' and data['source_running']
         assert request('POST', '/api/auth/logout', csrf=session['csrf_token'])[0] == 200
