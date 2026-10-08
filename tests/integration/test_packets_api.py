@@ -51,10 +51,12 @@ class PacketsApiTests(unittest.TestCase):
         spoofed = self.get('/api/packets?spoofed=1').json['packets']
         self.assertEqual([p['sender_mac'] for p in spoofed], [self.cfg.attacker_mac])
         self.assertEqual(self.get('/api/packets?q=%25').json['packets'], [])
+        latest = self.get('/api/packets?latest=1&limit=1').json['packets']
+        self.assertEqual([p['sender_mac'] for p in latest], [self.cfg.attacker_mac])
 
     def test_list_rejects_invalid_parameters(self):
         login(self.client)
-        for query in ('limit=0', 'limit=501', 'q=' + 'a' * 65, 'after_id=-1', 'spoofed=2'):
+        for query in ('limit=0', 'limit=501', 'q=' + 'a' * 65, 'after_id=-1', 'spoofed=2', 'latest=2'):
             with self.subTest(query=query):
                 self.assertEqual(self.get('/api/packets?' + query).status_code, 400)
 

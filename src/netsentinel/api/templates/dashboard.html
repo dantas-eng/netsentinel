@@ -56,14 +56,22 @@
           <p class="ping-note"><strong>Ping Vítima → Gateway</strong><br>Verifique a queda e a recuperação no terminal da Vítima. O dashboard não mede ping.</p>
         </section>
       </div>
+      <section class="panel packets-panel" aria-labelledby="packets-title">
+        <div class="panel-heading flex flex-wrap items-center justify-between gap-3"><div><span class="eyebrow">03 / QUADROS CAPTURADOS</span><h2 id="packets-title">Pacotes ARP <span id="packet-count" class="muted"></span></h2></div>
+          <div class="flex flex-wrap items-center gap-4"><label class="packet-search"><span class="sr-only">Filtrar por MAC ou IP</span><input id="packet-filter" type="search" maxlength="64" placeholder="Filtrar por MAC ou IP" autocomplete="off"></label><label class="check"><input id="packet-spoofed" type="checkbox"> Só alegações falsas</label></div></div>
+        <div class="packet-head" aria-hidden="true"><span>Nº</span><span>Hora</span><span>Origem</span><span>Destino</span><span>Tipo</span><span>Tam.</span><span>Resumo</span></div>
+        <ol id="packets" class="packet-list" aria-label="Pacotes ARP, mais novos primeiro. Setas para navegar, Enter para abrir."></ol>
+        <p id="packets-empty" class="empty">Nenhum quadro ARP guardado.</p>
+        <p class="muted table-note">Quadros ARP completos, guardados por 5 dias. Em vermelho: o IP do remetente pertence a outro MAC no inventário.</p>
+      </section>
       <section class="panel devices-panel" aria-labelledby="devices-title">
-        <div class="panel-heading flex flex-wrap items-center justify-between gap-3"><div><span class="eyebrow">03 / INVENTÁRIO PERSISTIDO</span><h2 id="devices-title">Dispositivos <span id="device-count" class="muted"></span></h2></div><span class="muted">Risco fuzzy de 0 a 100 · maior = mais risco</span></div>
+        <div class="panel-heading flex flex-wrap items-center justify-between gap-3"><div><span class="eyebrow">04 / INVENTÁRIO PERSISTIDO</span><h2 id="devices-title">Dispositivos <span id="device-count" class="muted"></span></h2></div><span class="muted">Risco fuzzy de 0 a 100 · maior = mais risco</span></div>
         <div class="table-scroll"><table><thead><tr><th>Dispositivo / MAC</th><th>Reputação</th><th>Risco fuzzy</th><th>Baseline</th><th>Última observação</th><th><span class="sr-only">Ações</span></th></tr></thead><tbody id="devices"></tbody></table></div>
         <p id="devices-empty" class="empty">Nenhum dispositivo registrado.</p>
         <p class="muted table-note">Reputação é reconhecimento manual. Não garante risco baixo. O risco exibido é a última avaliação persistida.</p>
       </section>
       <section class="panel history-panel" aria-labelledby="history-title">
-        <div class="panel-heading flex flex-wrap items-center justify-between gap-3"><div><span class="eyebrow">04 / HISTÓRICO</span><h2 id="history-title">Eventos e auditoria</h2></div><nav class="flex gap-2" aria-label="Histórico"><button id="show-events" aria-pressed="true">Eventos</button><button id="show-audit" aria-pressed="false">Auditoria</button></nav></div>
+        <div class="panel-heading flex flex-wrap items-center justify-between gap-3"><div><span class="eyebrow">05 / HISTÓRICO</span><h2 id="history-title">Eventos e auditoria</h2></div><nav class="flex gap-2" aria-label="Histórico"><button id="show-events" aria-pressed="true">Eventos</button><button id="show-audit" aria-pressed="false">Auditoria</button></nav></div>
         <div id="events-panel"><p id="history-note" class="muted">Carregando histórico…</p><ol id="events" class="timeline"></ol><p id="events-empty" class="empty">Nenhum evento registrado.</p></div>
         <div id="audit-panel" hidden><p class="muted">Até 100 registros mais recentes de confirmação, revogação e calibração.</p><ol id="audit" class="timeline"></ol><p id="audit-empty" class="empty">Nenhuma ação auditada.</p></div>
       </section>
@@ -76,6 +84,15 @@
     <section class="detail-section"><h3>Reconhecimento manual</h3><p id="reputation-help" class="muted"></p><form id="reputation-form" class="grid gap-3"><label>Motivo<textarea id="reputation-reason" required maxlength="500" rows="2" placeholder="Como você identificou este dispositivo?"></textarea></label><button id="reputation-submit" class="primary" type="submit">Confirmar dispositivo</button></form></section>
     <section class="detail-section"><h3>Baseline de volume</h3><p class="muted">Mediana de cinco janelas completas de 8 s, sem sobreposição e sem conflito ARP. O valor permanece congelado até nova calibração.</p><p id="calibration-state"></p><button id="calibrate" type="button" aria-describedby="calibrate-reason">Iniciar calibração</button><p id="calibrate-reason" class="muted" role="status" hidden></p></section>
     <p id="detail-message" role="status" aria-live="polite"></p>
+  </dialog>
+  <dialog id="packet-dialog" class="packet-dialog" aria-labelledby="packet-title">
+    <div class="flex flex-wrap items-start justify-between gap-4"><div><span class="eyebrow">QUADRO ARP</span><h2 id="packet-title"></h2><p id="packet-subtitle" class="muted mono"></p></div>
+      <div class="flex gap-2"><button id="packet-prev" type="button" aria-keyshortcuts="ArrowLeft">← Anterior</button><button id="packet-next" type="button" aria-keyshortcuts="ArrowRight">Próximo →</button><button id="close-packet" type="button">Fechar</button></div></div>
+    <p id="packet-verdict" class="verdict" role="status"></p>
+    <div class="packet-panes">
+      <section aria-labelledby="packet-tree-title"><h3 id="packet-tree-title">Detalhes</h3><div id="packet-tree" class="packet-tree"></div></section>
+      <section aria-labelledby="packet-bytes-title"><h3 id="packet-bytes-title">Bytes</h3><p class="muted">Offset · hexadecimal · ASCII. Selecione um campo ou um byte.</p><div id="packet-bytes" class="packet-bytes mono"></div></section>
+    </div>
   </dialog>
 </body>
 </html>

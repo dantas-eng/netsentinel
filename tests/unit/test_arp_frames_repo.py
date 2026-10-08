@@ -49,6 +49,11 @@ class ArpFrameRepositoryTests(unittest.TestCase):
         self.assertEqual(second['summary'], '10.77.0.1 está em 02:00:00:00:00:30')
         self.assertEqual(second['length'], 60)
 
+    def test_latest_returns_newest_rows_in_ascending_order(self):
+        self.save((NOW, LEGIT), (NOW + 1, SPOOF), (NOW + 2, LEGIT))
+        ids = [f['id'] for f in self.repo.arp_frames(trusted=TRUSTED)]
+        self.assertEqual([f['id'] for f in self.repo.arp_frames(limit=2, latest=True, trusted=TRUSTED)], ids[1:])
+
     def test_spoofed_only_and_query(self):
         self.save((NOW, LEGIT), (NOW, SPOOF))
         self.assertEqual([f['sender_mac'] for f in self.repo.arp_frames(spoofed_only=True, trusted=TRUSTED)],

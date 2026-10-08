@@ -218,11 +218,12 @@ def create_app(settings: Settings, lab_config=None, database=None, mitigation=No
         query = args.get('q') or None
         if query is not None and len(query) > 64:
             raise ValueError('Busca limitada a 64 caracteres.')
-        if args.get('spoofed', '0') not in ('0', '1'):
-            raise ValueError('spoofed deve ser 0 ou 1.')
+        for flag in ('spoofed', 'latest'):
+            if args.get(flag, '0') not in ('0', '1'):
+                raise ValueError(f'{flag} deve ser 0 ou 1.')
         return jsonify(packets=repository.arp_frames(
             int(args.get('after_id', 0)), int(args.get('limit', 100)), args.get('spoofed') == '1',
-            query, identity.trusted_bindings()))
+            query, identity.trusted_bindings(), latest=args.get('latest') == '1'))
 
     @app.get('/api/packets/<int:frame_id>')
     def packet(frame_id):

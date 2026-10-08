@@ -292,7 +292,7 @@ class Repository:
             removed += session.execute(delete(ArpFrame).where(ArpFrame.id < floor)).rowcount or 0
         return removed
 
-    def arp_frames(self, after_id=0, limit=100, spoofed_only=False, query=None, trusted=None):
+    def arp_frames(self, after_id=0, limit=100, spoofed_only=False, query=None, trusted=None, latest=False):
         if type(limit) is not int or not 1 <= limit <= 500 or type(after_id) is not int or after_id < 0:
             raise ValueError('Paginação inválida.')
         statement = select(ArpFrame).where(ArpFrame.id > after_id)
@@ -305,8 +305,10 @@ class Repository:
                        ArpFrame.target_mac, ArpFrame.target_ip)
             statement = statement.where(or_(*(c.contains(query.lower(), autoescape=True) for c in columns)))
         with self.db.transaction() as session:
-            rows = session.scalars(statement.order_by(ArpFrame.id).limit(limit))
-            return [self._frame_item(row, trusted) for row in rows]
+            # latest: as N mais novas (abertura do dashboard), devolvidas na mesma ordem crescente.
+            order = ArpFrame.id.desc() if latest else ArpFrame.id
+            rows = list(session.scalars(statement.order_by(order).limit(limit)))
+            return [self._frame_item(row, trusted) for row in (rows[::-1] if latest else rows)]
 
     def _frame_detail(self, row, trusted):
         if row is None:
