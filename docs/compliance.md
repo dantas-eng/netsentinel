@@ -80,12 +80,14 @@ demonstrada e mitigada no ambiente real das quatro VMs.
 | [evidence.py](../src/netsentinel/security/evidence.py), `verify_interval` | Verifica deltas de contadores, estado ARP e bloqueio; não declara ping verificado. |
 | [test_security_pipeline.py](../tests/integration/test_security_pipeline.py), `SecurityPipelineAcceptance.test_new_attacker_without_baseline_causes_verified_agent_action` | PCAP → captura → fuzzy → Strategy → API do agente, com kernel/HTTP de transporte substituídos nos testes. |
 | [test_security.py](../tests/unit/test_security.py), `EvidenceTests.test_active_drops_and_zero_post_filter_delta` e `test_ping_or_static_alone_cannot_prove_firewall` | Critério de evidência e rejeição de comprovação incompleta, com dados controlados. |
+| [packets/dissect.py](../src/netsentinel/packets/dissect.py), [test_packets.py](../tests/unit/test_packets.py) e [test_packets_api.py](../tests/integration/test_packets_api.py) | Quadros ARP guardados e dissecados camada a camada (Ethernet, 802.1Q, ARP, preenchimento) com veredito pelo mesmo inventário do detector; modal no dashboard mostra os bytes que mentem (ADR 0014). Conferência com `tcpdump -XX` no Sensor fica no ensaio das VMs. |
 | [test_security_consecutive.py](../tests/unit/test_security_consecutive.py), `ConsecutiveEvaluationsTests.test_two_consecutive_qualifications_apply_once_at_threshold` e `test_nonqualifying_evaluation_resets_then_requires_two_fresh_ones` | Disparo na segunda avaliação e reinício da sequência. |
 
 Decisões relacionadas: [ADR 0001](decisions/0001-arp-sem-encaminhamento.md),
 [ADR 0003](decisions/0003-agente-e-acesso-hostonly.md),
 [ADR 0007](decisions/0007-duas-avaliacoes-antes-da-mitigacao.md) e
-[ADR 0008](decisions/0008-deteccao-ampla-mitigacao-restrita.md).
+[ADR 0008](decisions/0008-deteccao-ampla-mitigacao-restrita.md) e
+[ADR 0014](decisions/0014-quadros-arp-e-visualizador.md).
 Roteiro operacional: [lab/README.md](../lab/README.md).
 
 A detecção 0.7.0 é mais ampla (segundo atacante sintético, falsificação de
