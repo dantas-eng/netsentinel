@@ -16,7 +16,7 @@ from deap import base, creator, tools
 
 from netsentinel.analysis.fuzzy.engine import infer as manual_infer
 from netsentinel.optimization.classifier import Parameters, scores
-from netsentinel.optimization.dataset import generate, inputs_of, load
+from netsentinel.optimization.dataset import DATASET_VERSION, generate, inputs_of, load
 from netsentinel.optimization.diagnostics import write as write_diagnostics
 
 BOUNDS = [(0.1, 1.0), (1., 20.), (0.25, 4.), (50., 85.)]
@@ -127,7 +127,8 @@ def run(directory):
                                                          if r['method'] == method], ddof=1))}
                         for metric in METRICS} for method in ('ga', 'nsga2')}
     output = {'baseline_test': baseline, 'summary_test': summary, 'runs': details,
-              'protocol': {'baseline_version': '0.7.0', 'dataset_version': 2,
+              'protocol': {'baseline_version': '0.7.0+adr0013',
+                           'dataset_version': DATASET_VERSION,
                            'ratio_decision': 'ADR 0011: piso fixo após diagnóstico do corpus',
                            'fixed_ratio': {'floor': 0.5, 'ceiling': 1.0},
                            'population': POPULATION, 'generations': GENERATIONS,
@@ -193,10 +194,10 @@ def report(directory, output):
     fig.savefig(directory/'pareto.png', dpi=180)
     plt.close(fig)
     text = ['# Comparação experimental — dados exclusivamente sintéticos', '',
-            'Baseline: fuzzy manual 0.7.0. Ratio ARP usa rampa fixa 0,5–1,0; '
+            'Baseline: fuzzy manual 0.7.0+adr0013. Ratio ARP usa rampa fixa 0,5–1,0; '
             'quatro genes são otimizados. O teste reservado não participa da busca '
             'nem da escolha de representantes.', '',
-            'Corpus v2: requests e replies ARP reais em PCAPs sintéticos; ratio '
+            'Corpus v3 (modelo da ADR 0013): requests e replies ARP reais em PCAPs sintéticos; ratio '
             'extraído pelo capturador. A verificação de variação e sensibilidade '
             'precedeu a decisão de manter o piso fixo (ADR 0011). As comparações '
             'anteriores estão invalidadas e preservadas em ../historical-invalid/.', '',
@@ -211,7 +212,10 @@ def report(directory, output):
              'neste split, não incerteza de generalização.', '',
              'Neste split sintético, ambos os métodos obtiveram F1 médio maior que o manual.'
              if all(v['f1']['mean'] > baseline['f1'] for v in output['summary_test'].values())
-             else 'Neste split, pelo menos um método não superou o F1 do manual.', '',
+             else 'Neste split, pelo menos um método não superou o F1 do manual.',
+             'Diferença de F1 médio em relação ao manual: ' + '; '.join(
+                 f'{m.upper()} {v["f1"]["mean"]-baseline["f1"]:+.4f}'
+                 for m, v in output['summary_test'].items()) + '.', '',
              f'A frente agrupada contém {len(unique)} pontos objetivos distintos. '
              'As ligações no gráfico são guias visuais, não soluções intermediárias garantidas.', '',
              'O painel de teste plota as 20 execuções individuais de cada método, '
@@ -234,6 +238,12 @@ def report(directory, output):
             text += ['', f'{method.upper()}: a redução média de falsos positivos vem '
                      'acompanhada de recall médio menor que o manual. F1 maior não '
                      'significa superioridade em todas as métricas.']
+        if (summary['fpr']['mean'] > baseline['fpr'] and
+                summary['recall']['mean'] > baseline['recall']):
+            text += ['', f'{method.upper()}: o recall médio maior vem acompanhado de mais '
+                     'falsos positivos (FPR médio maior) e precisão média '
+                     f'{"menor" if summary["precision"]["mean"] < baseline["precision"] else "não menor"}'
+                     ' que a do manual. F1 maior não significa superioridade em todas as métricas.']
     diag = output['diagnostics']
     text += ['', '## Validade e cobertura do corpus', '',
              f'Ratio: {diag["ratio"]["all"]["distinct"]} valores distintos; '
@@ -249,8 +259,8 @@ def report(directory, output):
     text += ['', 'Ativação de regras no treino: ' + ', '.join(
         f'{key}={value}' for key, value in diag['training_rule_activation'].items()) + '.',
         '', diag['r4_limitation'], '',
-        'A comparação exercita R1/R2/R3/R5; não comprova eficácia empírica de R4. '
-        'O piso 0,5 foi mantido como controle da 0.7.0, não demonstrado ótimo.']
+        'A comparação exercita R1–R5; a ativação de R4 reflete evidência ausente neutra, não eficácia empírica comprovada. '
+        'O piso 0,5 foi mantido como controle da 0.7.0+adr0013, não demonstrado ótimo.']
     nsga = [r for r in output['runs'] if r['method'] == 'nsga2']
     distinct = len({tuple(r['genes']) for r in nsga})
     frequencies = [r['genes'][1] for r in nsga]

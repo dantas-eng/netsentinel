@@ -12,8 +12,10 @@ from netsentinel.optimization.dataset import inputs_of, load
 
 def diagnose(records):
     def distribution(rows):
-        ratios = [row['inputs']['arp_reply_ratio'] for row in rows]
+        # ADR 0013: ratio é None com amostra ARP insuficiente; fica fora das estatísticas.
+        ratios = [x for x in (row['inputs']['arp_reply_ratio'] for row in rows) if x is not None]
         return {'n': len(rows), 'min': min(ratios), 'max': max(ratios),
+                'absent': len(rows)-len(ratios),
                 'distinct': len(set(ratios)),
                 'at_or_below_floor': sum(x <= .5 for x in ratios),
                 'between_floor_and_ceiling': sum(.5 < x < 1 for x in ratios),
@@ -43,8 +45,8 @@ def diagnose(records):
                           for family in sorted({r['family'] for r in records})},
             'training_rule_activation': activation,
             'training_one_gene_at_a_time': sensitivity,
-            'r4_limitation': 'NEW sem baseline não confirma desvio baixo: R4 permanece '
-                             'inativa por ausência de histórico, não por ratio saturado.'}
+            'r4_limitation': 'Pela ADR 0013, ratio e desvio ausentes são neutros: R4 ativa por ausência '
+                             'de evidência de risco, não por desvio baixo confirmado.'}
 
 
 def validate(diagnostics):

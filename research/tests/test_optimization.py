@@ -12,6 +12,7 @@ from unittest.mock import patch
 import numpy as np
 
 from netsentinel.analysis.fuzzy.engine import infer
+from netsentinel.analysis.features import ARP_RATIO_MIN_PACKETS
 from netsentinel.analysis.models import RiskInputs
 from netsentinel.optimization.classifier import (
     ParameterizedFuzzyRiskStrategy, Parameters, memberships, scores,
@@ -102,8 +103,13 @@ class DatasetTests(unittest.TestCase):
             content, features = replay(record['config'])
             self.assertEqual(hashlib.sha256(content).hexdigest(), record['pcap_sha256'])
             self.assertEqual(features.arp_frequency, record['config']['arp_count']/8)
-            self.assertEqual(features.arp_reply_ratio,
-                             record['config']['arp_reply_count']/record['config']['arp_count'])
+            total = record['config']['arp_count']
+            if total < ARP_RATIO_MIN_PACKETS:
+                self.assertIsNone(features.arp_reply_ratio)
+                self.assertIn('arp_reply_ratio_insufficient_sample', features.missing_reasons)
+            else:
+                self.assertEqual(features.arp_reply_ratio,
+                                 record['config']['arp_reply_count']/total)
             self.assertEqual(features.conflict, .5 if record['config']['gateway_claim'] else 0)
 
     def test_new_attacker_no_baseline_end_to_end(self):
@@ -132,11 +138,14 @@ class DatasetTests(unittest.TestCase):
     def test_ratio_varies_in_every_family_and_both_labels(self):
         for family in {r['family'] for r in self.records}:
             rows = [r for r in self.records if r['family'] == family]
-            self.assertGreater(len({r['inputs']['arp_reply_ratio'] for r in rows}), 1)
+            # Amostra mínima (ADR 0013): ratio None em janelas com poucos ARP.
+            ratios = {r['inputs']['arp_reply_ratio'] for r in rows} - {None}
+            self.assertGreater(len(ratios), 1)
             self.assertTrue(any(r['config']['arp_reply_count'] < r['config']['arp_count']
                                 for r in rows))
         for label in (0, 1):
-            ratios = [r['inputs']['arp_reply_ratio'] for r in self.records if r['label'] == label]
+            ratios = [r['inputs']['arp_reply_ratio'] for r in self.records
+                      if r['label'] == label and r['inputs']['arp_reply_ratio'] is not None]
             self.assertTrue(any(x <= .5 for x in ratios))
             self.assertTrue(any(.5 < x < 1 for x in ratios))
 
@@ -146,7 +155,8 @@ class DatasetTests(unittest.TestCase):
         for values in result['training_one_gene_at_a_time'].values():
             self.assertGreater(values['binary_decision_changes'], 0)
         self.assertGreater(result['training_rule_activation']['R5'], 0)
-        self.assertEqual(result['training_rule_activation']['R4'], 0)
+        # ADR 0013: ratio/desvio ausentes são neutros, então R4 também ativa.
+        self.assertGreater(result['training_rule_activation']['R4'], 0)
         self.assertTrue(all(r['inputs']['volume_deviation'] is None
                             for r in self.records if r['inputs']['reputation'] == 'new'))
 

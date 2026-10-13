@@ -20,7 +20,7 @@ TARGET = '02:00:00:00:00:30'
 GATEWAY = '02:00:00:00:00:10'
 VICTIM = '02:00:00:00:00:20'
 SEED = 20260919
-DATASET_VERSION = 2
+DATASET_VERSION = 3
 FAMILIES = [('normal', 0, 70), ('burst', 0, 70), ('new_device', 0, 70),
             ('discovery', 0, 70), ('migration_ambiguous', 0, 70),
             ('unknown_history', 0, 70), ('poison_fast', 1, 60),
@@ -162,7 +162,7 @@ def generate(directory):
 def load(directory):
     manifest = json.loads((Path(directory)/'dataset.json').read_text())
     if manifest.get('dataset_version') != DATASET_VERSION:
-        raise ValueError('Corpus invalidado: regenere a versão 2 com requests/replies reais.')
+        raise ValueError('Corpus invalidado: regenere a versão 3 com requests/replies reais.')
     records = manifest['records']
     if any('arp_reply_ratio' not in record['inputs'] for record in records):
         raise ValueError('Manifesto incompleto: ratio deve ser extraído do PCAP.')
