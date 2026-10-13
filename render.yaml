@@ -24,3 +24,7 @@ services:
         value: operador
       - key: OPERATOR_PASSWORD_HASH
         sync: false
+      - key: PACKET_RETENTION_DAYS
+        value: "5"
+      - key: PACKET_MAX_ROWS
+        value: "20000"

@@ -81,6 +81,11 @@ integrador; o limite de 3 minutos do regulamento continua valendo para a ExpoTec
     caiu de 0,6944 para 0,6389 enquanto o FPR caiu de 0,4762 para 0,1548.
     Alternativas, como aplicar a amostra mínima só às regras de calma, são
     decisão futura do grupo.
+23. **Por que guardar só ARP e por quanto tempo?** ARP não carrega dado de
+    usuário e é o quadro que prova a alegação falsa. Até 128 bytes por quadro,
+    5 dias ou 20000 linhas, o que vier primeiro, para caber no plano gratuito.
+    Em ataque, as 20000 linhas acabam antes: ~30 min na nuvem, minutos no lab.
+    O veredito do modal usa o mesmo inventário do detector.
 
 ## Rodada de estudo
 
