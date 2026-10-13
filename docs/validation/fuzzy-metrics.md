@@ -15,22 +15,22 @@ Piso recomendado pelo critério (maior `correct`, menor
 
 | esperado \ previsto | confiável | desconhecido | suspeito | abstenção |
 | --- | --- | --- | --- | --- |
-| confiável | 2 | 0 | 0 | 0 |
+| confiável | 3 | 0 | 0 | 0 |
 | desconhecido | 0 | 6 | 0 | 0 |
 | suspeito | 0 | 0 | 3 | 0 |
-| abstenção | 0 | 0 | 0 | 4 |
+| abstenção | 0 | 0 | 0 | 3 |
 
 ## Por classe
 
 | classe | precision | recall | F1 | support |
 | --- | --- | --- | --- | --- |
-| confiável | 1.000 | 1.000 | 1.000 | 2 |
+| confiável | 1.000 | 1.000 | 1.000 | 3 |
 | desconhecido | 1.000 | 1.000 | 1.000 | 6 |
 | suspeito | 1.000 | 1.000 | 1.000 | 3 |
-| abstenção | 1.000 | 1.000 | 1.000 | 4 |
+| abstenção | 1.000 | 1.000 | 1.000 | 3 |
 
 Acertos: 15 / 15.
-Taxa de abstenção (previsto nulo): 0.267.
+Taxa de abstenção (previsto nulo): 0.200.
 
 ## Erros
 
@@ -40,8 +40,8 @@ Nenhum desacordo entre rótulo esperado e classificação do motor.
 
 | floor | correct | abstention_rate | misses |
 | --- | --- | --- | --- |
-| 0.3 | 14 | 0.267 | quiet_new_reply_lean→suspeito |
-| 0.4 | 14 | 0.267 | quiet_new_reply_lean→suspeito |
-| 0.5 | 15 | 0.267 | — |
-| 0.6 | 14 | 0.267 | quiet_known_reply_heavy→confiável |
-| 0.7 | 14 | 0.267 | quiet_known_reply_heavy→confiável |
+| 0.3 | 14 | 0.200 | quiet_new_reply_lean→suspeito |
+| 0.4 | 14 | 0.200 | quiet_new_reply_lean→suspeito |
+| 0.5 | 15 | 0.200 | — |
+| 0.6 | 14 | 0.200 | quiet_known_reply_heavy→confiável |
+| 0.7 | 14 | 0.200 | quiet_known_reply_heavy→confiável |
