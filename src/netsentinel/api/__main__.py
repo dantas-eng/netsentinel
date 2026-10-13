@@ -2,7 +2,7 @@
 import argparse
 import os
 from netsentinel.api.settings import Settings
-from netsentinel.api.app import create_app
+from netsentinel.api.app import create_app, packet_retention
 from netsentinel.repositories.database import Database
 from netsentinel.repositories.migrate import upgrade_schema
 from netsentinel.repositories.store import Repository
@@ -27,8 +27,11 @@ def main():
             url = url.replace('postgresql://', 'postgresql+psycopg://', 1)
         db = Database(url)
         try:
-            result = Repository(db).prune_events(
+            repository = Repository(db)
+            result = repository.prune_events(
                 args.keep_days, os.environ.get('OPERATOR_USERNAME', 'operator'), args.confirm)
+            if args.confirm:
+                result['arp_frames_removed'] = repository.prune_arp_frames(*packet_retention())
             print(result)
         finally:
             db.engine.dispose()

@@ -1,5 +1,6 @@
 """Fonte cloud em memória: sem Scapy, sockets raw ou comunicação com o laboratório."""
 from dataclasses import dataclass
+import struct
 from time import monotonic, time
 from uuid import uuid4
 
@@ -43,6 +44,18 @@ class SyntheticMitigation:
                               for name in ('seen', 'dropped', 'passed')})
 
 
+def _arp(dst, src, op, spa, tha, tpa):
+    """Quadro ARP Ethernet/IPv4 real em bytes, preenchido até 60 bytes como na rede."""
+    def mac(value):
+        return bytes.fromhex(value.replace(':', ''))
+
+    def ip(value):
+        return bytes(int(part) for part in value.split('.'))
+    frame = (mac(dst) + mac(src) + b'\x08\x06' + struct.pack('!HHBBH', 1, 0x0800, 6, 4, op)
+             + mac(src) + ip(spa) + mac(tha) + ip(tpa))
+    return frame + bytes(60 - len(frame))
+
+
 class SyntheticSource:
     INTRUDER_MAC = '02:00:00:00:00:50'
     ATTACK_AFTER_SECONDS = 60
@@ -75,7 +88,16 @@ class SyntheticSource:
                                               arp_requests=0, arp_replies=int(10 * duration))
             claims.append(dict(ip=self.identity.victim_ip, claimed_mac=self.INTRUDER_MAC,
                                source_mac=self.INTRUDER_MAC, count=int(10 * duration)))
-        return dict(timestamp=time(), source='synthetic', interface='synthetic',
+        i = self.identity
+        raws = [_arp('ff:ff:ff:ff:ff:ff', i.victim_mac, 1, i.victim_ip, '00:00:00:00:00:00', i.gateway_ip),
+                _arp(i.victim_mac, i.gateway_mac, 2, i.gateway_ip, i.victim_mac, i.victim_ip)]
+        # ponytail: quantidade fixa por janela (máx. 10), não proporcional à taxa simulada.
+        if attacking:
+            raws += [_arp(i.victim_mac, i.attacker_mac, 2, i.gateway_ip, i.victim_mac, i.victim_ip)] * 4
+        if elapsed >= self.INTRUDER_AFTER_SECONDS:
+            raws += [_arp(i.gateway_mac, self.INTRUDER_MAC, 2, i.victim_ip, i.gateway_mac, i.gateway_ip)] * 4
+        frames = [dict(timestamp=time(), raw=raw) for raw in raws]
+        return dict(timestamp=time(), source='synthetic', interface='synthetic', arp_frames=frames,
                     window_seconds=8, observed_seconds=duration, warming_up=elapsed < 8,
                     incomplete=False, capture_run_id=self.run_id, window_end_monotonic=now,
                     window_start_monotonic=now-duration, devices=devices, arp_claims=claims,
