@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {Api, ApiError, EventFeed, eventNames, graphData, counterInterval, riskStyle, sparkline} from '../../src/netsentinel/api/static/core.mjs';
+import {Api, ApiError, EventFeed, eventNames, graphData, counterInterval, riskStyle, sparkline, hexRows, byteOwners} from '../../src/netsentinel/api/static/core.mjs';
 
 const ok = json => ({ok: true, status: 200, json: async () => json});
 test('eventNames registers threat_unmitigable so the dashboard can display it', () => {
@@ -106,4 +106,33 @@ test('sparkline spaces X by sample index and saturates scores outside 0-100', ()
   assert.deepEqual(result.markers.map(m => m.x), [0, 50, 100]);
   assert.deepEqual(result.markers.map(m => m.y), [40, 20, 0]);
   assert.equal(result.path, 'M 0 40 L 50 20 L 100 0');
+});
+
+test('hexRows splits a 60-byte frame into 16-byte rows with offsets and printable ASCII', () => {
+  const raw = 'ff'.repeat(6) + '41'.repeat(6) + '0806' + '00'.repeat(46);
+  const rows = hexRows(raw);
+  assert.deepEqual(rows.map(r => r.offset), ['0000', '0010', '0020', '0030']);
+  assert.deepEqual(rows.map(r => r.bytes.length), [16, 16, 16, 12]);
+  assert.deepEqual(rows[0].bytes[0], {index: 0, hex: 'ff', ascii: '.'});
+  assert.deepEqual(rows[0].bytes[6], {index: 6, hex: '41', ascii: 'A'});
+  assert.equal(rows[3].bytes[0].index, 48);
+});
+test('hexRows rejects odd or non-hex input instead of drawing garbage', () => {
+  assert.deepEqual(hexRows('abc'), []);
+  assert.deepEqual(hexRows('zz'), []);
+});
+test('byteOwners maps each byte to its field, including ranges that cross a row', () => {
+  const layers = [
+    {name: 'Ethernet II', fields: [{name: 'Destino', value: 'x', start: 0, end: 6}]},
+    {name: 'ARP', fields: [{name: 'IP do remetente', value: '10.0.0.1', start: 28, end: 32}]},
+    {name: 'Preenchimento', fields: [{name: 'Bytes após o ARP', value: '18 bytes', start: 42, end: 60}]},
+  ];
+  const owners = byteOwners(layers, 60);
+  assert.equal(owners.length, 60);
+  assert.equal(owners[5].field.name, 'Destino');
+  assert.equal(owners[6], null);
+  for (const i of [28, 29, 30, 31]) assert.equal(owners[i].field.name, 'IP do remetente');
+  assert.equal(owners[32], null);
+  assert.equal(owners[47].layer, 2); assert.equal(owners[48].layer, 2);
+  assert.equal(owners[28].layer, 1);
 });

@@ -8,6 +8,11 @@ from netsentinel.capture.config import CaptureConfig
 from netsentinel.capture.service import CaptureService
 
 
+def line(data):
+    """Snapshot em JSON; os bytes dos quadros ARP ficam para o backend."""
+    return json.dumps({key: value for key, value in data.items() if key != "arp_frames"})
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--interface", required=True)
@@ -21,7 +26,7 @@ def main():
     try:
         config = CaptureConfig(args.interface, args.window_seconds,
                                args.max_observations, args.isolated_lab)
-        CaptureService(config, lambda data: print(json.dumps(data), flush=True)).run(stop)
+        CaptureService(config, lambda data: print(line(data), flush=True)).run(stop)
     except (ValueError, OSError) as exc:
         print(f"Captura interrompida: {exc}", file=sys.stderr)
         return 1

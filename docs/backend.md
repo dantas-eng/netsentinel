@@ -89,6 +89,9 @@ independente do token do agente da Vítima; nunca enviar o token do agente ao br
 | GET /api/topology | Nós persistidos e conexões observadas na última janela |
 | GET /api/events?after_id=0&limit=100 | Histórico crescente, até 500 por página |
 | GET /api/audit | Últimas 100 ações auditadas |
+| GET /api/packets?after_id=0&limit=100&spoofed=0&q=&latest=0 | Quadros ARP guardados, crescente por id, até 500 por página. `latest=1` devolve os N mais novos (abertura do dashboard); `spoofed=1` só alegações falsas pelo inventário; `q` busca em MACs e IPs (até 64 caracteres). |
+| GET /api/packets/{id} | Item da lista mais `raw_hex`, `layers` (campos com intervalo de bytes) e `verdict` `{spoofed, expected_mac, reason}`; 404 se o quadro saiu da retenção. |
+| GET /api/packets/match?mac=&ip=&before= | Quadro mais recente com origem Ethernet `mac`, IP do remetente `ip` e `captured_at <= before`; 404 `packet_not_retained` quando não existe mais. |
 
 Erros: 401 sem sessão/credencial inválida, 403 sem CSRF, 409 para conflitos de
 estado (ex.: calibração de NEW), 503 quando o Repository não está disponível.
@@ -98,6 +101,15 @@ rodando. Após uma falha da fonte, reiniciar o processo depois de resolver a cau
 A confirmação não promete benignidade. UNKNOWN é falha do provider; MAC ausente
 em consulta bem-sucedida e primeiro registro persistido são NEW. A API não permite
 cadastrar UNKNOWN como estado administrativo.
+
+### Quadros ARP
+
+Cada janela grava seus quadros ARP na tabela `arp_frames` (migração
+`0002_arp_frames`) e poda na mesma transação: remove quadros com mais de
+`PACKET_RETENTION_DAYS` dias (padrão 5) e mantém no máximo `PACKET_MAX_ROWS`
+linhas (padrão 20000), mais antigas primeiro. Valores inválidos impedem o
+início. `prune --confirm` também aplica essa retenção aos quadros. O veredito
+usa `trusted_bindings()`, o mesmo inventário do detector (ADR 0014).
 
 ## Baseline
 

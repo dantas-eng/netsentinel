@@ -145,3 +145,23 @@ export function sparkline(points, width, height, options = {}) {
   const path = markers.map((mark, index) => `${index ? 'L' : 'M'} ${mark.x} ${mark.y}`).join(' ');
   return {path, markers, empty: false, width, height};
 }
+
+// Linhas do painel de bytes, como no Wireshark: 16 bytes por linha, offset em hex.
+export function hexRows(rawHex) {
+  if (typeof rawHex !== 'string' || rawHex.length % 2 || !/^[0-9a-f]*$/i.test(rawHex)) return [];
+  const rows = [];
+  for (let index = 0; index < rawHex.length / 2; index++) {
+    if (index % 16 === 0) rows.push({offset: index.toString(16).padStart(4, '0'), bytes: []});
+    const hex = rawHex.slice(index * 2, index * 2 + 2).toLowerCase(), code = parseInt(hex, 16);
+    rows.at(-1).bytes.push({index, hex, ascii: code >= 0x20 && code < 0x7f ? String.fromCharCode(code) : '.'});
+  }
+  return rows;
+}
+// Dono de cada byte (camada e campo) para o destaque cruzado; o primeiro campo vence.
+export function byteOwners(layers, length) {
+  const owners = Array(length).fill(null);
+  layers.forEach((layer, index) => layer.fields.forEach(field => {
+    for (let at = Math.max(0, field.start); at < Math.min(length, field.end); at++) owners[at] ??= {layer: index, field};
+  }));
+  return owners;
+}

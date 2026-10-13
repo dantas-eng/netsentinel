@@ -2,11 +2,13 @@
 from math import isfinite
 from statistics import median
 from time import time
-from sqlalchemy import delete, func, select
+from sqlalchemy import and_, delete, false, func, or_, select
 from sqlalchemy.exc import SQLAlchemyError
 from netsentinel.analysis.contracts import Reputation
 from netsentinel.security.config import validate_mac
-from netsentinel.repositories.models import Device, Audit, Calibration, Baseline, StoredEvent, LatestSnapshot
+from netsentinel.repositories.models import (Device, Audit, Calibration, Baseline, StoredEvent, LatestSnapshot,
+                                            ArpFrame)
+from netsentinel.packets.dissect import dissect, verdict
 
 
 class DomainConflict(ValueError):
@@ -250,3 +252,78 @@ class Repository:
                 audit(session, mac, 'events_pruned', actor,
                       f'{removed} eventos anteriores a {int(cutoff)} (keep_days={keep_days})')
             return dict(cutoff=cutoff, matched=matched, removed=removed)
+
+    # ---- quadros ARP (ADR 0014) ----
+
+    @staticmethod
+    def _frame_item(row, trusted):
+        packet = dissect(row.raw)
+        return dict(id=row.id, captured_at=row.captured_at, eth_src=row.eth_src, eth_dst=row.eth_dst,
+                    opcode=row.opcode, sender_mac=row.sender_mac, sender_ip=row.sender_ip,
+                    target_mac=row.target_mac, target_ip=row.target_ip, length=packet['length'],
+                    summary=packet['summary'], spoofed=verdict(packet, trusted or {})['spoofed'])
+
+    def save_arp_frames(self, frames, capture_run_id, source, retention_days, max_rows, now=None):
+        rows = []
+        for frame in frames:
+            packet = dissect(frame['raw'])
+            rows.append(ArpFrame(captured_at=frame['timestamp'], capture_run_id=capture_run_id, source=source,
+                                 eth_src=packet['eth_src'], eth_dst=packet['eth_dst'], opcode=packet['opcode'],
+                                 sender_mac=packet['sender_mac'], sender_ip=packet['sender_ip'],
+                                 target_mac=packet['target_mac'], target_ip=packet['target_ip'], raw=frame['raw']))
+        with self.db.transaction() as session:
+            session.add_all(rows)
+            session.flush()
+            self._prune_frames(session, retention_days, max_rows, now)
+        return len(rows)
+
+    def prune_arp_frames(self, retention_days, max_rows, now=None):
+        with self.db.transaction() as session:
+            return self._prune_frames(session, retention_days, max_rows, now)
+
+    @staticmethod
+    def _prune_frames(session, retention_days, max_rows, now):
+        if type(retention_days) is not int or retention_days < 1 or type(max_rows) is not int or max_rows < 1:
+            raise ValueError('Retenção de pacotes deve usar inteiros >= 1.')
+        cutoff = (time() if now is None else now) - retention_days * 86400
+        removed = session.execute(delete(ArpFrame).where(ArpFrame.captured_at < cutoff)).rowcount or 0
+        floor = session.scalar(select(ArpFrame.id).order_by(ArpFrame.id.desc()).offset(max_rows - 1).limit(1))
+        if floor is not None:
+            removed += session.execute(delete(ArpFrame).where(ArpFrame.id < floor)).rowcount or 0
+        return removed
+
+    def arp_frames(self, after_id=0, limit=100, spoofed_only=False, query=None, trusted=None, latest=False):
+        if type(limit) is not int or not 1 <= limit <= 500 or type(after_id) is not int or after_id < 0:
+            raise ValueError('Paginação inválida.')
+        statement = select(ArpFrame).where(ArpFrame.id > after_id)
+        if spoofed_only:
+            pairs = [and_(ArpFrame.sender_ip == ip, ArpFrame.sender_mac != mac.lower())
+                     for ip, mac in (trusted or {}).items()]
+            statement = statement.where(or_(*pairs) if pairs else false())
+        if query:
+            columns = (ArpFrame.eth_src, ArpFrame.eth_dst, ArpFrame.sender_mac, ArpFrame.sender_ip,
+                       ArpFrame.target_mac, ArpFrame.target_ip)
+            statement = statement.where(or_(*(c.contains(query.lower(), autoescape=True) for c in columns)))
+        with self.db.transaction() as session:
+            # latest: as N mais novas (abertura do dashboard), devolvidas na mesma ordem crescente.
+            order = ArpFrame.id.desc() if latest else ArpFrame.id
+            rows = list(session.scalars(statement.order_by(order).limit(limit)))
+            return [self._frame_item(row, trusted) for row in (rows[::-1] if latest else rows)]
+
+    def _frame_detail(self, row, trusted):
+        if row is None:
+            return None
+        packet = dissect(row.raw)
+        return {**self._frame_item(row, trusted), 'raw_hex': row.raw.hex(), 'layers': packet['layers'],
+                'verdict': verdict(packet, trusted or {})}
+
+    def arp_frame(self, frame_id, trusted):
+        with self.db.transaction() as session:
+            return self._frame_detail(session.get(ArpFrame, frame_id), trusted)
+
+    def match_arp_frame(self, mac, ip, before, trusted):
+        with self.db.transaction() as session:
+            row = session.scalar(select(ArpFrame).where(
+                ArpFrame.eth_src == mac.lower(), ArpFrame.sender_ip == ip, ArpFrame.captured_at <= before)
+                .order_by(ArpFrame.captured_at.desc(), ArpFrame.id.desc()).limit(1))
+            return self._frame_detail(row, trusted)
