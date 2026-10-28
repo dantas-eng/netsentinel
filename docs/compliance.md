@@ -30,7 +30,7 @@ foram comprovados. Guias de fechamento: [docs/closure](closure/README.md).
 | 2 | Telecommunications & Network Security | **Código pronto, validação pendente** — ensaio completo nas quatro VMs. |
 | 3 | Computational Intelligence & Algorithm Optimization | **Implementado e verificado offline** — classificador fuzzy operacional mantido; extensão GA/NSGA-II validada por testes e experimento reprodutível; trilha própria aprovada pelo professor conforme resposta fornecida pelo grupo; validação em tráfego real/VMs ainda pendente. |
 | 4 | Software Architecture & Design Patterns | Arquitetura documentada, com Observer, Strategy e Repository aplicados e justificados. |
-| 5 | Cloud Computing for Software Development | **Código/configuração preparados, validação cloud pendente** — CI executada; CD Render + Supabase implementado e ainda desativado até configurar contas. Serviço público e execução real do CD ainda não comprovados. |
+| 5 | Cloud Computing for Software Development | **Serviço publicado; CD ligado, primeira execução real pendente** — https://netsentinel-q6zg.onrender.com no ar desde 28/10/2026 (commit `14a503e`), Supabase na revisão `0002_arp_frames`. Falta registrar o job de CD rodando na main e o login no navegador. |
 
 ## 1. Open Source Contribution & Collaboration
 
@@ -166,7 +166,7 @@ usado, suas limitações e como a composição ocorre, não apenas citar os nome
 
 ## 5. Cloud Computing for Software Development
 
-**Situação: código/configuração preparados, validação cloud pendente.** O deploy
+**Situação: serviço publicado; CD ligado, primeira execução real pendente.** O deploy
 em nuvem e o fluxo CI/CD são obrigatórios no roteiro. O provedor foi alterado
 para Render Free + Supabase Free por escolha do grupo (ADR 0012).
 
@@ -178,9 +178,13 @@ para Render Free + Supabase Free por escolha do grupo (ADR 0012).
 | [render_deploy.py](../tools/render_deploy.py) | Publica SHA testado, verifica status live e commit; ainda sem execução contra a API real |
 | [cloud_smoke.py](../tools/cloud_smoke.py) | HTTPS, sessão/CSRF, endpoints e fonte sintética; não certifica browser/Socket.IO |
 | [Guia cloud](closure/cloud.md) | Criação gratuita, banco, ativação de CD, validação, limites e manutenção |
+| https://netsentinel-q6zg.onrender.com | Web Service Render Free (Virginia), primeiro deploy em 28/10/2026 do commit `14a503e` da main; `/health` responde `{"mode":"cloud","status":"ok"}` |
+| Supabase `netsentinel` (us-east-1) | Tabelas criadas pelo Alembic no boot, revisão `0002_arp_frames`; fonte sintética gravando eventos e quadros ARP; Data API desligada e RLS ligado nas 8 tabelas |
+| Environment `academic-cloud` (só `main`) | Secrets `RENDER_API_KEY` e `CLOUD_OPERATOR_PASSWORD`; variáveis do repositório `RENDER_SERVICE_ID`, `CLOUD_URL`, `CLOUD_OPERATOR_USERNAME` e `RENDER_DEPLOY_ENABLED=true` |
 
-**Para fechar:** guardar URL HTTPS, commit, execução real do job de CD, revisão
-Alembic do banco gerenciado e evidência de login/dashboard no navegador. Testes
+**Para fechar:** registrar a primeira execução real do job de CD (merge deste
+ajuste na main) e a evidência de login/dashboard no navegador. URL, commit e
+revisão Alembic do banco gerenciado já estão registrados acima. Testes
 mockados do cliente de deploy não substituem essas execuções. Migração em Postgres
 local/CI não deve ser confundida com validação em Supabase.
 

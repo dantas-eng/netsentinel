@@ -34,10 +34,15 @@ principal do ataque continua local nas VMs, independente desses serviços.
 2. Em **Data API / Integration**, desligar **Enable Data API**. O NetSentinel
    acessa Postgres via SQLAlchemy; não usa anon key, service_role ou APIs Supabase.
    Isso evita expor tabelas criadas pelo Alembic por uma API paralela sem sessão Flask.
-3. Em **Connect**, escolher **Session pooler**, porta **5432**. Copiar a URL
+3. Depois do primeiro deploy, quando o Alembic tiver criado as tabelas, ligar o
+   RLS em todas as tabelas de `public` (`ALTER TABLE public.<tabela> ENABLE ROW
+   LEVEL SECURITY;`). O app conecta como `postgres`, dono das tabelas, e não é
+   afetado; as chaves públicas do Supabase ficam sem acesso mesmo se a Data API
+   for religada.
+4. Em **Connect**, escolher **Session pooler**, porta **5432**. Copiar a URL
    correspondente ao projeto. Não usar Transaction pooler/porta 6543: manter
    semântica de sessão e prepared statements do driver sem mudar o app.
-4. Usar a URL no formato abaixo; substituir todos os campos ilustrativos:
+5. Usar a URL no formato abaixo; substituir todos os campos ilustrativos:
 
 ```text
 postgresql+psycopg://postgres.PROJECT_REF:SENHA_CODIFICADA@HOST_DO_SESSION_POOLER:5432/postgres?sslmode=require&connect_timeout=10
