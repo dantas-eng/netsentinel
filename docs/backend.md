@@ -111,6 +111,16 @@ linhas (padrão 20000), mais antigas primeiro. Valores inválidos impedem o
 início. `prune --confirm` também aplica essa retenção aos quadros. O veredito
 usa `trusted_bindings()`, o mesmo inventário do detector (ADR 0014).
 
+### Retenção de eventos
+
+`EVENT_MAX_ROWS` limita a tabela `events`: no máximo uma vez por minuto, o
+pipeline apaga os mais antigos e mantém os N mais novos. O padrão é 20000 no
+modo `cloud`, para caber no Supabase Free e encurtar o replay inicial do
+dashboard. No modo `lab` fica desligado por padrão, porque ali os eventos são
+evidência do ensaio; defina a variável para ligar. A poda automática não grava
+auditoria, assim como a dos quadros ARP. O `prune --keep-days` manual continua
+igual e auditado.
+
 ## Baseline
 
 São necessárias cinco janelas válidas de 8 s posteriores à solicitação, sem

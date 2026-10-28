@@ -1,14 +1,18 @@
 """Integra captura, Repository, fuzzy e a Strategy já aprovada."""
 from threading import RLock
-from time import time
+from time import monotonic, time
 from netsentinel.analysis.fuzzy import FuzzyRiskStrategy
 from netsentinel.security.demo import SecurityDemo
 
 
 class BackendPipeline:
-    def __init__(self, repository, bus, identity, mitigation, mode, packet_retention=(5, 20000)):
+    EVENT_PRUNE_INTERVAL = 60  # segundos; a consulta de corte não precisa rodar a cada janela
+
+    def __init__(self, repository, bus, identity, mitigation, mode, packet_retention=(5, 20000),
+                 event_max_rows=None, clock=monotonic):
         self.repository, self.bus, self.mode = repository, bus, mode
         self.packet_retention = packet_retention
+        self.event_max_rows, self.clock, self.last_event_prune = event_max_rows, clock, None
         self.lock = RLock()
         self.latest = None
         self.security = SecurityDemo(identity, FuzzyRiskStrategy(repository, repository),
@@ -37,3 +41,8 @@ class BackendPipeline:
             for completed in self.repository.collect_calibration(snapshot):
                 self.publish(dict(event='baseline_calibrated', **completed))
             self.publish(dict(event='snapshot_updated', snapshot=snapshot))
+            now = self.clock()
+            if self.event_max_rows and (self.last_event_prune is None
+                                        or now - self.last_event_prune >= self.EVENT_PRUNE_INTERVAL):
+                self.repository.prune_event_rows(self.event_max_rows)
+                self.last_event_prune = now

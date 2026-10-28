@@ -253,6 +253,16 @@ class Repository:
                       f'{removed} eventos anteriores a {int(cutoff)} (keep_days={keep_days})')
             return dict(cutoff=cutoff, matched=matched, removed=removed)
 
+    def prune_event_rows(self, max_rows):
+        """Mantém só os max_rows eventos mais novos. Retenção automática, sem auditoria."""
+        if type(max_rows) is not int or max_rows < 1:
+            raise ValueError('max_rows deve ser inteiro >= 1.')
+        with self.db.transaction() as session:
+            floor = session.scalar(select(StoredEvent.id).order_by(StoredEvent.id.desc()).offset(max_rows - 1).limit(1))
+            if floor is None:
+                return 0
+            return session.execute(delete(StoredEvent).where(StoredEvent.id < floor)).rowcount or 0
+
     # ---- quadros ARP (ADR 0014) ----
 
     @staticmethod

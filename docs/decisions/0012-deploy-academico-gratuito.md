@@ -38,6 +38,9 @@ somente depois de configurar contas e secrets. Congelamento final desativa o CD.
   interromper e reavaliar com o grupo. Sem keep-alive artificial ou upgrade automático.
 - A fonte sintética produz eventos continuamente enquanto o processo está ativo.
   Acompanhar armazenamento e usar a poda manual já existente, preservando evidências.
+  Atualização de 28/10/2026: medido cerca de 1 KB por evento e 1,5 MB por hora
+  com o serviço acordado. Na nuvem, `EVENT_MAX_ROWS` (padrão 20000) passa a podar
+  eventos automaticamente; no laboratório a poda continua manual.
 - Reinícios/redeploys reiniciam a fonte, não o histórico. Durante troca de revisão
   o provedor pode manter instâncias antiga/nova transitoriamente: não colher
   evidência nem calibrar baseline nesse intervalo. Não escalar horizontalmente.
