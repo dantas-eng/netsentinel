@@ -3,6 +3,12 @@
 Versionamento semântico. As entregas anteriores à 0.4.0 cobriram captura,
 normalização, janela móvel e o motor fuzzy.
 
+## Não lançado — retenção de eventos na nuvem (28/10/2026)
+
+- `EVENT_MAX_ROWS` mantém só os eventos mais novos, verificando no máximo uma vez
+  por minuto. Padrão 20000 em `APP_MODE=cloud`; desligado no laboratório, onde
+  os eventos são evidência. Evita estourar os 500 MB do Supabase Free.
+
 ## Não lançado — visualizador de pacotes ARP (08/10/2026)
 
 - Quadros ARP Ethernet/IPv4 guardados em `arp_frames` (até 128 bytes), com

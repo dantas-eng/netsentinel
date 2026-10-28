@@ -28,3 +28,5 @@ services:
         value: "5"
       - key: PACKET_MAX_ROWS
         value: "20000"
+      - key: EVENT_MAX_ROWS
+        value: "20000"

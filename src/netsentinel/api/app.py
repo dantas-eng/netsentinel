@@ -33,6 +33,16 @@ def packet_retention():
     return tuple(values)
 
 
+def event_max_rows(mode):
+    """EVENT_MAX_ROWS: inteiro >= 1. Padrão 20000 na nuvem; desligado no lab (eventos são evidência)."""
+    raw = os.environ.get('EVENT_MAX_ROWS', '20000' if mode == 'cloud' else '')
+    if raw == '':
+        return None
+    if not raw.isdigit() or int(raw) < 1:
+        raise ValueError('EVENT_MAX_ROWS deve ser inteiro >= 1.')
+    return int(raw)
+
+
 def create_app(settings: Settings, lab_config=None, database=None, mitigation=None, clock=monotonic):
     if settings.mode == 'lab' and (lab_config is None or lab_config.hostonly_ip is None):
         raise ValueError('Backend local exige configuração do Sensor com Host-only.')
@@ -51,7 +61,8 @@ def create_app(settings: Settings, lab_config=None, database=None, mitigation=No
     identity = lab_config if settings.mode == 'lab' else SyntheticIdentity()
     strategy = (mitigation if mitigation is not None else VictimAgentMitigationStrategy(lab_config)) \
         if settings.mode == 'lab' else SyntheticMitigation(identity, clock)
-    pipeline = BackendPipeline(repository, bus, identity, strategy, settings.mode, packet_retention())
+    pipeline = BackendPipeline(repository, bus, identity, strategy, settings.mode, packet_retention(),
+                               event_max_rows(settings.mode), clock)
     app.extensions.update(database=db, repository=repository, event_bus=bus,
                           pipeline=pipeline, settings=settings)
     clients, client_lock = {}, RLock()
